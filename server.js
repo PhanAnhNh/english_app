@@ -5,21 +5,14 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { JWT_SECRET, JWT_EXPIRES_IN } = require('./config/constants');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// ==========================================
-// 0. CẤU HÌNH (CONFIG)
-// ==========================================
-
-// Lưu ý: Bạn nên để các biến này trong file .env. 
-// Tôi để hardcode ở đây để bạn chạy được ngay lập tức.
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://admin:tienganh123321@englishappdb.7wt55du.mongodb.net/english_app?appName=EnglishAppDB';
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_key_bao_mat_cua_ban';
-const JWT_EXPIRES_IN = '30d';
-
+const connectDB = require('./config/database');
+connectDB(); // Gọi hàm kết nối
 // ==========================================
 // 1. HELPER FUNCTIONS & MIDDLEWARE
 // ==========================================
@@ -111,6 +104,22 @@ const ExerciseSchema = new mongoose.Schema({
     topicRef: String,
     createdAt: { type: Date, default: Date.now }
 });
+// Thêm schema cho bài nghe
+const ListeningSchema = new mongoose.Schema({
+    title: String,
+    audioUrl: { type: String, required: true },
+    transcript: String,
+    level: String,
+    topic: String,
+    duration: Number, // thời lượng audio (giây)
+    questions: [{
+        questionText: String,
+        startTime: Number, // thời điểm bắt đầu câu hỏi trong audio
+        options: [String],
+        correctAnswer: String
+    }],
+    createdAt: { type: Date, default: Date.now }
+});
 const Exercise = mongoose.model('exercises', ExerciseSchema);
 
 // E. Topic (Unit)
@@ -176,14 +185,47 @@ const AdminLogSchema = new mongoose.Schema({
 });
 const AdminLog = mongoose.model('admin_logs', AdminLogSchema);
 
-// ==========================================
-// 3. KẾT NỐI DATABASE
-// ==========================================
+// Schema cho thành tích
+const AchievementSchema = new mongoose.Schema({
+    name: String,
+    description: String,
+    icon: String,
+    type: { type: String, enum: ['streak', 'vocab', 'exercise', 'level'] },
+    requirement: Number, // số lượng cần đạt
+    rewardGems: Number,
+    createdAt: { type: Date, default: Date.now }
+});
+const Achievement = mongoose.model('achievements', AchievementSchema);
 
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ Đã kết nối MongoDB thành công!'))
-    .catch(err => console.error('❌ Lỗi kết nối MongoDB:', err));
+// Schema cho user achievements
+const UserAchievementSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'users' },
+    achievementId: { type: mongoose.Schema.Types.ObjectId, ref: 'achievements' },
+    unlockedAt: { type: Date, default: Date.now },
+    progress: { type: Number, default: 0 }
+});
+const UserAchievement = mongoose.model('user_achievements', UserAchievementSchema);
 
+// Schema cho notifications
+const NotificationSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'users' },
+    title: String,
+    message: String,
+    type: { type: String, enum: ['reminder', 'achievement', 'system'] },
+    read: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
+});
+const Notification = mongoose.model('notifications', NotificationSchema);
+
+const LeaderboardSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'users' },
+    xp: Number,
+    level: String,
+    rank: Number,
+    week: Number, // tuần trong năm
+    createdAt: { type: Date, default: Date.now }
+});
+const Listening = mongoose.model('listenings', ListeningSchema);
 
 // ==========================================
 // 4. API ROUTES (ENDPOINTS)
@@ -589,6 +631,51 @@ app.delete('/api/vocab/:id', authMiddleware, adminMiddleware, async (req, res) =
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// API thống kê học tập cho user
+app.get('/api/learning-stats', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Thống kê tổng quan
+        const totalVocab = await Vocabulary.countDocuments();
+        const learnedVocab = await Progress.countDocuments({
+            userId, completed: true
+        });
+
+        const totalExercises = await Exercise.countDocuments();
+        const completedExercises = await Submission.countDocuments({ userId });
+
+        // Tiến độ theo level
+        const levelProgress = await Progress.aggregate([
+            { $match: { userId: mongoose.Types.ObjectId(userId) } },
+            { $lookup: { from: 'topics', localField: 'topicId', foreignField: '_id', as: 'topic' } },
+            {
+                $group: {
+                    _id: '$topic.level',
+                    completed: { $sum: { $cond: ['$completed', 1, 0] } },
+                    total: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Điểm số trung bình
+        const averageScore = await Submission.aggregate([
+            { $match: { userId: mongoose.Types.ObjectId(userId) } },
+            { $group: { _id: null, avgScore: { $avg: '$score' } } }
+        ]);
+
+        res.json({
+            learnedVocab,
+            totalVocab,
+            completedExercises,
+            totalExercises,
+            levelProgress,
+            averageScore: averageScore[0]?.avgScore || 0,
+            completionRate: Math.round((learnedVocab / totalVocab) * 100) || 0
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // --- GRAMMAR (Có Phân trang) ---
 app.get('/api/grammar', authMiddleware, async (req, res) => {
     try {
@@ -855,6 +942,148 @@ app.get('/api/admin/logs', authMiddleware, adminMiddleware, async (req, res) => 
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// API để check và unlock achievements
+app.post('/api/check-achievements', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const unlocked = [];
+
+        // Check streak achievements
+        const streak = await Streak.findOne({ userId });
+        if (streak) {
+            const streakAchievements = await Achievement.find({ type: 'streak' });
+            for (let achievement of streakAchievements) {
+                if (streak.current >= achievement.requirement) {
+                    const exists = await UserAchievement.findOne({ userId, achievementId: achievement._id });
+                    if (!exists) {
+                        await UserAchievement.create({ userId, achievementId: achievement._id });
+
+                        // Thưởng gems
+                        await User.findByIdAndUpdate(userId, {
+                            $inc: { gems: achievement.rewardGems }
+                        });
+
+                        unlocked.push(achievement);
+                    }
+                }
+            }
+        }
+
+        res.json({ unlocked });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// API theo dõi tiến độ chi tiết
+app.get('/api/progress/detailed', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { days = 30 } = req.query;
+
+        const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+        // Thống kê học tập theo ngày
+        const dailyProgress = await Submission.aggregate([
+            {
+                $match: {
+                    userId: mongoose.Types.ObjectId(userId),
+                    submittedAt: { $gte: startDate }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: '$submittedAt' },
+                        month: { $month: '$submittedAt' },
+                        day: { $dayOfMonth: '$submittedAt' }
+                    },
+                    exercisesCompleted: { $sum: 1 },
+                    averageScore: { $avg: '$score' },
+                    totalXP: { $sum: '$score' }
+                }
+            },
+            { $sort: { '_id.year': -1, '_id.month': -1, '_id.day': -1 } }
+        ]);
+
+        res.json({ dailyProgress });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// API search toàn diện
+app.get('/api/search', authMiddleware, async (req, res) => {
+    try {
+        const { q, type = 'all' } = req.query;
+
+        if (!q) return res.status(400).json({ message: 'Thiếu từ khóa tìm kiếm' });
+
+        const results = {};
+
+        if (type === 'all' || type === 'vocab') {
+            results.vocabularies = await Vocabulary.find({
+                $or: [
+                    { word: { $regex: q, $options: 'i' } },
+                    { meaning: { $regex: q, $options: 'i' } },
+                    { example: { $regex: q, $options: 'i' } }
+                ]
+            }).limit(10);
+        }
+
+        if (type === 'all' || type === 'grammar') {
+            results.grammars = await Grammar.find({
+                $or: [
+                    { title: { $regex: q, $options: 'i' } },
+                    { content: { $regex: q, $options: 'i' } }
+                ]
+            }).limit(10);
+        }
+
+        res.json(results);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// API gửi reminder học tập
+app.post('/api/send-reminder', authMiddleware, async (req, res) => {
+    try {
+        // Gửi reminder cho users không học trong 2 ngày
+        const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+
+        const inactiveUsers = await Streak.find({
+            lastStudyDate: { $lt: twoDaysAgo }
+        }).populate('userId');
+
+        for (let streak of inactiveUsers) {
+            await Notification.create({
+                userId: streak.userId._id,
+                title: 'Nhắc nhở học tập 📚',
+                message: 'Bạn đã bỏ lỡ 2 ngày học! Hãy quay lại để giữ streak nhé!',
+                type: 'reminder'
+            });
+        }
+
+        res.json({ message: `Đã gửi reminder cho ${inactiveUsers.length} users` });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// API leaderboard
+app.get('/api/leaderboard', authMiddleware, async (req, res) => {
+    try {
+        const { type = 'weekly', limit = 50 } = req.query;
+
+        const leaderboard = await User.find()
+            .select('username xp level avatarUrl')
+            .sort({ xp: -1 })
+            .limit(parseInt(limit));
+
+        // Thêm rank
+        const ranked = leaderboard.map((user, index) => ({
+            ...user.toObject(),
+            rank: index + 1
+        }));
+
+        res.json(ranked);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
 // 404 Handler
 app.use((req, res) => res.status(404).json({ message: 'API Endpoint không tồn tại' }));
 
