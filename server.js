@@ -13,9 +13,6 @@ app.use(cors());
 
 const connectDB = require('./config/database');
 connectDB(); // Gọi hàm kết nối
-// ==========================================
-// 1. HELPER FUNCTIONS & MIDDLEWARE
-// ==========================================
 
 const createToken = (payload) => {
     return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
@@ -55,6 +52,7 @@ const UserSchema = new mongoose.Schema({
     role: { type: String, default: 'student', enum: ['student', 'admin'] },
     email: { type: String, index: true },
     level: { type: String, default: 'A' },
+    fullname: { type: String, required: true },
     avatarUrl: String,
 
     // Gamification
@@ -234,7 +232,7 @@ const Listening = mongoose.model('listenings', ListeningSchema);
 // --- AUTH ---
 app.post('/api/register', async (req, res) => {
     try {
-        const { username, password, role = 'student', email } = req.body;
+        const { fullname, username, password, role = 'student', email } = req.body;
         if (!username || !password) return res.status(400).json({ message: 'Thiếu username hoặc password' });
 
         const existing = await User.findOne({ username });
@@ -243,11 +241,11 @@ app.post('/api/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash(password, salt);
 
-        const user = new User({ username, passwordHash: hash, role, email });
+        const user = new User({ fullname, username, passwordHash: hash, role, email });
         await user.save();
 
         const token = createToken({ id: user._id, username: user.username, role: user.role });
-        res.json({ message: 'Đăng ký thành công', user: { id: user._id, username: user.username, role: user.role }, token });
+        res.json({ message: 'Đăng ký thành công', user: { id: user._id, username: user.username, fullname: user.fullname, role: user.role }, token });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -260,8 +258,23 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ message: 'Sai username hoặc password' });
         }
 
-        const token = createToken({ id: user._id, username: user.username, role: user.role });
-        res.json({ message: 'Đăng nhập thành công', user: { id: user._id, username: user.username, role: user.role }, token });
+        const token = createToken({
+            id: user._id,
+            username: user.username,
+            fullname: user.fullname,
+            role: user.role
+        });
+
+        res.json({
+            message: 'Đăng nhập thành công',
+            user: {
+                id: user._id,
+                username: user.username,
+                fullname: user.fullname, // Thêm vào đây
+                role: user.role
+            },
+            token
+        });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -288,7 +301,9 @@ app.get('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) =>
         if (search) {
             filter.$or = [
                 { username: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } }
+                { email: { $regex: search, $options: 'i' } },
+                // Lấy danh sách users với phân trang và lọc
+                { fullname: { $regex: search, $options: 'i' } }
             ];
         }
 
@@ -329,7 +344,7 @@ app.get('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res
 // Cập nhật thông tin user
 app.put('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-        const { username, email, role, level, xp, gems, avatarUrl } = req.body;
+        const { fullname, username, email, role, level, xp, gems, avatarUrl } = req.body;
 
         // Kiểm tra user tồn tại
         const existingUser = await User.findById(req.params.id);
@@ -349,6 +364,7 @@ app.put('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res
         }
 
         const updateData = {
+            ...(fullname && { fullname }),
             ...(username && { username }),
             ...(email && { email }),
             ...(role && { role }),
@@ -462,7 +478,7 @@ app.get('/api/admin/users-stats', authMiddleware, adminMiddleware, async (req, r
         ]);
 
         const recentUsers = await User.find()
-            .select('username role level createdAt')
+            .select('username fullname role level createdAt') // Chỉ 1 lệnh select
             .sort({ createdAt: -1 })
             .limit(5);
 
@@ -482,11 +498,12 @@ app.get('/api/admin/users-stats', authMiddleware, adminMiddleware, async (req, r
 // User tự cập nhật thông tin cá nhân
 app.put('/api/profile', authMiddleware, async (req, res) => {
     try {
-        const { email, level, avatarUrl } = req.body;
+        const { fullname, email, level, avatarUrl } = req.body;
         const userId = req.user.id;
 
         // Chỉ cho phép update các field không nhạy cảm
         const updateData = {
+            ...(fullname && { fullname }),
             ...(email && { email }),
             ...(level && { level }),
             ...(avatarUrl && { avatarUrl })
@@ -1071,7 +1088,7 @@ app.get('/api/leaderboard', authMiddleware, async (req, res) => {
         const { type = 'weekly', limit = 50 } = req.query;
 
         const leaderboard = await User.find()
-            .select('username xp level avatarUrl')
+            .select('fullname xp level avatarUrl')
             .sort({ xp: -1 })
             .limit(parseInt(limit));
 
