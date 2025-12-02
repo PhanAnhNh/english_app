@@ -1169,6 +1169,11 @@ app.get('/api/topics', authMiddleware, async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 100; // Mặc định lấy nhiều topic
         const skip = (page - 1) * limit;
+
+        // Tham số sắp xếp (nếu không truyền thì mặc định theo createdAt giảm dần)
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+
         const total = await Topic.countDocuments(filter);
         const data = await Topic.find(filter)
             .sort({ [sortBy]: sortOrder })
