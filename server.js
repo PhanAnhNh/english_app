@@ -9,6 +9,7 @@ const { JWT_SECRET, JWT_EXPIRES_IN } = require('./config/constants');
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 const connectDB = require('./config/database');
@@ -232,8 +233,18 @@ const Listening = mongoose.model('listenings', ListeningSchema);
 // --- AUTH ---
 app.post('/api/register', async (req, res) => {
     try {
-        const { fullname, username, password, role = 'student', email } = req.body;
-        if (!username || !password) return res.status(400).json({ message: 'Thiếu username hoặc password' });
+        // Public registration: always create regular student accounts.
+        const { fullname, username, password, email } = req.body;
+        const role = 'student'; // force role to student regardless of client input
+
+        // Validate required fields and return which are missing
+        const missing = [];
+        if (!fullname) missing.push('fullname');
+        if (!username) missing.push('username');
+        if (!password) missing.push('password');
+        if (missing.length) {
+            return res.status(400).json({ message: `Thiếu trường: ${missing.join(', ')}`, missingFields: missing });
+        }
 
         const existing = await User.findOne({ username });
         if (existing) return res.status(400).json({ message: 'Username đã tồn tại' });
@@ -271,6 +282,41 @@ app.post('/api/login', async (req, res) => {
                 id: user._id,
                 username: user.username,
                 fullname: user.fullname, // Thêm vào đây
+                role: user.role
+            },
+            token
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- ADMIN LOGIN (Chỉ admin được phép đăng nhập vào web admin)
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await User.findOne({ username });
+
+        if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+            return res.status(400).json({ message: 'Sai username hoặc password' });
+        }
+
+        // Chỉ cho phép admin
+        if (user.role !== 'admin') {
+            return res.status(403).json({ message: 'Chỉ Admin được phép đăng nhập vào web admin' });
+        }
+
+        const token = createToken({
+            id: user._id,
+            username: user.username,
+            fullname: user.fullname,
+            role: user.role
+        });
+
+        res.json({
+            message: 'Đăng nhập admin thành công',
+            user: {
+                id: user._id,
+                username: user.username,
+                fullname: user.fullname,
                 role: user.role
             },
             token
@@ -340,6 +386,43 @@ app.get('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res
         res.status(500).json({ error: e.message });
     }
 });
+
+// Tạo user mới bởi Admin (Admin có thể set role)
+app.post('/api/admin/add_users', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const { fullname, username, password, email, role, level, avatarUrl } = req.body;
+
+        // Validate required fields
+        const missing = [];
+        if (!fullname) missing.push('fullname');
+        if (!username) missing.push('username');
+        if (!password) missing.push('password');
+        if (missing.length) return res.status(400).json({ message: `Thiếu trường: ${missing.join(', ')}`, missingFields: missing });
+
+        // Kiểm tra username tồn tại
+        const existing = await User.findOne({ username });
+        if (existing) return res.status(400).json({ message: 'Username đã tồn tại' });
+
+        // Role chỉ cho phép các giá trị hợp lệ, mặc định 'student'
+        const allowedRoles = ['student', 'admin'];
+        const userRole = allowedRoles.includes(role) ? role : 'student';
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(password, salt);
+
+        const user = new User({ fullname, username, passwordHash: hash, role: userRole, email, level, avatarUrl });
+        await user.save();
+
+        // Ghi log admin action
+        await AdminLog.create({ adminId: req.user.id, action: 'create_user', meta: { id: user._id, role: user.role } });
+
+        res.json({ message: 'Tạo user thành công', user: { id: user._id, username: user.username, fullname: user.fullname, role: user.role, email: user.email } });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 
 // Cập nhật thông tin user
 app.put('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res) => {
