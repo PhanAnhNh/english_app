@@ -85,9 +85,24 @@ const GrammarSchema = new mongoose.Schema({
     structure: String,
     content: String,
     example: String,
+    isPublished: { type: Boolean, default: false },
+    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'grammar_categories' },
     createdAt: { type: Date, default: Date.now }
 });
 const Grammar = mongoose.model('grammars', GrammarSchema);
+
+// Grammar catagories
+const GrammarCategorySchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    description: String,
+    icon: String,
+    order: { type: Number, default: 0 },
+    level: { type: String, enum: ['A', 'B', 'C'], default: 'A' },
+    isActive: { type: Boolean, default: true },
+    parentCategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'grammar_categories' }, // Danh mục cha (cho cây phân cấp)
+    createdAt: { type: Date, default: Date.now }
+});
+const GrammarCategory = mongoose.model('grammar_categories', GrammarCategorySchema);
 
 // D. Exercise
 const ExerciseSchema = new mongoose.Schema({
@@ -302,7 +317,6 @@ app.get('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) =>
             filter.$or = [
                 { username: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } },
-                // Lấy danh sách users với phân trang và lọc
                 { fullname: { $regex: search, $options: 'i' } }
             ];
         }
@@ -693,6 +707,79 @@ app.get('/api/learning-stats', authMiddleware, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Thêm categories
+app.get('/api/grammar-categories', authMiddleware, async (req, res) => {
+    try {
+        const categories = await GrammarCategory.find({ isActive: true })
+            .sort({ order: 1, createdAt: -1 });
+        res.json(categories);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/grammar-categories/:id', authMiddleware, async (req, res) => {
+    try {
+        const category = await GrammarCategory.findById(req.params.id);
+        if (!category) return res.status(404).json({ message: 'Không tìm thấy danh mục' });
+        res.json(category);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/grammar-categories', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const category = new GrammarCategory(req.body);
+        await category.save();
+        res.json(category);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/grammar-categories/:id', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const updated = await GrammarCategory.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+        res.json(updated);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/grammar-categories/:id', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        await GrammarCategory.findByIdAndUpdate(req.params.id, { isActive: false });
+        res.json({ message: 'Đã ẩn danh mục' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// API lấy Grammar theo Category
+app.get('/api/grammar/by-category/:categoryId', authMiddleware, async (req, res) => {
+    try {
+        const { page = 1, limit = 10, level } = req.query;
+        const skip = (page - 1) * limit;
+
+        let filter = {
+            categoryId: req.params.categoryId,
+            isPublished: true
+        };
+
+        if (level) filter.level = level;
+
+        const total = await Grammar.countDocuments(filter);
+        const data = await Grammar.find(filter)
+            .populate('categoryId', 'name icon')
+            .skip(skip)
+            .limit(parseInt(limit))
+            .sort({ createdAt: -1 });
+
+        res.json({
+            total,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: Math.ceil(total / limit),
+            data
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // --- GRAMMAR (Có Phân trang) ---
 app.get('/api/grammar', authMiddleware, async (req, res) => {
     try {
@@ -701,7 +788,11 @@ app.get('/api/grammar', authMiddleware, async (req, res) => {
         const skip = (page - 1) * limit;
 
         const total = await Grammar.countDocuments();
-        const data = await Grammar.find().skip(skip).limit(limit).sort({ createdAt: -1 });
+        const data = await Grammar.find()
+            .populate('categoryId', 'name icon') // <-- THÊM populate
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 });
 
         res.json({ total, page, limit, totalPages: Math.ceil(total / limit), data });
     } catch (e) { res.status(500).json({ error: e.message }); }
