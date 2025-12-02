@@ -9,9 +9,11 @@ const { JWT_SECRET, JWT_EXPIRES_IN } = require('./config/constants');
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 const connectDB = require('./config/database');
+
 connectDB(); // Gọi hàm kết nối
 
 const createToken = (payload) => {
@@ -239,29 +241,68 @@ const LeaderboardSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 const Listening = mongoose.model('listenings', ListeningSchema);
-
-// ==========================================
-// 4. API ROUTES (ENDPOINTS)
-// ==========================================
-
 // --- AUTH ---
 app.post('/api/register', async (req, res) => {
     try {
-        const { fullname, username, password, role = 'student', email } = req.body;
-        if (!username || !password) return res.status(400).json({ message: 'Thiếu username hoặc password' });
+        // Nhận dữ liệu từ request body
+        const { fullname, username, password, email } = req.body;
 
+        // Public registration: luôn tạo tài khoản student
+        const role = 'student'; // force role to student regardless of client input
+
+        // Validate required fields and return which are missing
+        const missing = [];
+        if (!fullname) missing.push('fullname');
+        if (!username) missing.push('username');
+        if (!password) missing.push('password');
+        if (missing.length) {
+            return res.status(400).json({
+                message: `Thiếu trường: ${missing.join(', ')}`,
+                missingFields: missing
+            });
+        }
+
+        // Kiểm tra username đã tồn tại chưa
         const existing = await User.findOne({ username });
         if (existing) return res.status(400).json({ message: 'Username đã tồn tại' });
 
+        // Hash password
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash(password, salt);
 
-        const user = new User({ fullname, username, passwordHash: hash, role, email });
+        // Tạo user mới
+        const user = new User({
+            fullname,
+            username,
+            passwordHash: hash,
+            role,
+            email: email || null // email có thể optional
+        });
         await user.save();
 
-        const token = createToken({ id: user._id, username: user.username, role: user.role });
-        res.json({ message: 'Đăng ký thành công', user: { id: user._id, username: user.username, fullname: user.fullname, role: user.role }, token });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+        // Tạo token
+        const token = createToken({
+            id: user._id,
+            username: user.username,
+            fullname: user.fullname,
+            role: user.role
+        });
+
+        // Trả về response
+        res.json({
+            message: 'Đăng ký thành công',
+            user: {
+                id: user._id,
+                username: user.username,
+                fullname: user.fullname,
+                role: user.role,
+                email: user.email
+            },
+            token
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.post('/api/login', async (req, res) => {
@@ -293,6 +334,41 @@ app.post('/api/login', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// --- ADMIN LOGIN (Chỉ admin được phép đăng nhập vào web admin)
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await User.findOne({ username });
+
+        if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+            return res.status(400).json({ message: 'Sai username hoặc password' });
+        }
+
+        // Chỉ cho phép admin
+        if (user.role !== 'admin') {
+            return res.status(403).json({ message: 'Chỉ Admin được phép đăng nhập vào web admin' });
+        }
+
+        const token = createToken({
+            id: user._id,
+            username: user.username,
+            fullname: user.fullname,
+            role: user.role
+        });
+
+        res.json({
+            message: 'Đăng nhập admin thành công',
+            user: {
+                id: user._id,
+                username: user.username,
+                fullname: user.fullname,
+                role: user.role
+            },
+            token
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/me', authMiddleware, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('-passwordHash');
@@ -301,6 +377,40 @@ app.get('/api/me', authMiddleware, async (req, res) => {
 });
 
 // --- USER MANAGEMENT (Admin only) ---
+app.post('/api/admin/add_users', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const { fullname, username, password, email, role, level, avatarUrl } = req.body;
+
+        // Validate required fields
+        const missing = [];
+        if (!fullname) missing.push('fullname');
+        if (!username) missing.push('username');
+        if (!password) missing.push('password');
+        if (missing.length) return res.status(400).json({ message: `Thiếu trường: ${missing.join(', ')}`, missingFields: missing });
+
+        // Kiểm tra username tồn tại
+        const existing = await User.findOne({ username });
+        if (existing) return res.status(400).json({ message: 'Username đã tồn tại' });
+
+        // Role chỉ cho phép các giá trị hợp lệ, mặc định 'student'
+        const allowedRoles = ['student', 'admin'];
+        const userRole = allowedRoles.includes(role) ? role : 'student';
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(password, salt);
+
+        const user = new User({ fullname, username, passwordHash: hash, role: userRole, email, level, avatarUrl });
+        await user.save();
+
+        // Ghi log admin action
+        await AdminLog.create({ adminId: req.user.id, action: 'create_user', meta: { id: user._id, role: user.role } });
+
+        res.json({ message: 'Tạo user thành công', user: { id: user._id, username: user.username, fullname: user.fullname, role: user.role, email: user.email } });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 // Lấy danh sách users với phân trang và lọc
 app.get('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) => {
@@ -716,6 +826,136 @@ app.get('/api/grammar-categories', authMiddleware, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// API lấy tất cả chủ đề grammar (đã có, nhưng cần thêm số lượng bài)
+app.get('/api/grammar-categories-with-count', authMiddleware, async (req, res) => {
+    try {
+        const { level } = req.query;
+
+        let filter = { isActive: true };
+        if (level) filter.level = level;
+
+        // Lấy tất cả categories
+        const categories = await GrammarCategory.find(filter)
+            .sort({ order: 1, createdAt: -1 });
+
+        // Thêm số lượng grammar trong mỗi category
+        const categoriesWithCount = await Promise.all(
+            categories.map(async (category) => {
+                const grammarCount = await Grammar.countDocuments({
+                    categoryId: category._id,
+                    isPublished: true
+                });
+
+                // Lấy 3 bài grammar mới nhất trong category
+                const recentGrammars = await Grammar.find({
+                    categoryId: category._id,
+                    isPublished: true
+                })
+                    .sort({ createdAt: -1 })
+                    .limit(3)
+                    .select('title level');
+
+                return {
+                    id: category._id,
+                    name: category.name,
+                    description: category.description,
+                    icon: category.icon,
+                    level: category.level,
+                    order: category.order,
+                    grammarCount,
+                    recentGrammars,
+                    createdAt: category.createdAt
+                };
+            })
+        );
+
+        // Filter out categories with 0 grammar
+        const filteredCategories = categoriesWithCount.filter(cat => cat.grammarCount > 0);
+
+        res.json({
+            total: filteredCategories.length,
+            categories: filteredCategories
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// API lấy chi tiết category với danh sách grammar phân trang
+app.get('/api/grammar-category/:id', authMiddleware, async (req, res) => {
+    try {
+        const {
+            page = 1,
+            limit = 10,
+            level,
+            sortBy = 'createdAt',
+            sortOrder = 'desc'
+        } = req.query;
+
+        const skip = (page - 1) * limit;
+
+        // 1. Lấy thông tin category
+        const category = await GrammarCategory.findById(req.params.id);
+        if (!category || !category.isActive) {
+            return res.status(404).json({ message: 'Không tìm thấy chủ đề' });
+        }
+
+        // 2. Tạo filter cho grammar
+        let filter = {
+            categoryId: category._id,
+            isPublished: true
+        };
+
+        if (level) filter.level = level;
+
+        // 3. Lấy tổng số và danh sách grammar
+        const total = await Grammar.countDocuments(filter);
+
+        const sortOptions = {};
+        sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+        const grammarList = await Grammar.find(filter)
+            .select('title level structure content example createdAt')
+            .skip(skip)
+            .limit(parseInt(limit))
+            .sort(sortOptions);
+
+        // 4. Lấy các sub-categories (nếu có)
+        const subCategories = await GrammarCategory.find({
+            parentCategoryId: category._id,
+            isActive: true
+        });
+
+        // 5. Lấy category cha (nếu có)
+        let parentCategory = null;
+        if (category.parentCategoryId) {
+            parentCategory = await GrammarCategory.findById(category.parentCategoryId)
+                .select('name id');
+        }
+
+        res.json({
+            category: {
+                id: category._id,
+                name: category.name,
+                description: category.description,
+                icon: category.icon,
+                level: category.level,
+                parentCategory
+            },
+            grammarList: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                totalPages: Math.ceil(total / limit),
+                data: grammarList
+            },
+            subCategories,
+            stats: {
+                totalGrammar: total,
+                subCategoryCount: subCategories.length
+            }
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/grammar-categories/:id', authMiddleware, async (req, res) => {
     try {
         const category = await GrammarCategory.findById(req.params.id);
@@ -786,13 +1026,24 @@ app.get('/api/grammar', authMiddleware, async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const { level, search } = req.query;
 
-        const total = await Grammar.countDocuments();
+        let filter = {};
+        if (level) filter.level = level;
+        if (search) {
+            filter.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { content: { $regex: search, $options: 'i' } }
+            ];
+        }
+        const total = await Grammar.countDocuments(filter);
         const data = await Grammar.find()
             .populate('categoryId', 'name icon') // <-- THÊM populate
             .skip(skip)
             .limit(limit)
-            .sort({ createdAt: -1 });
+            .sort({ [sortBy]: sortOrder });
 
         res.json({ total, page, limit, totalPages: Math.ceil(total / limit), data });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -833,16 +1084,30 @@ app.get('/api/exercises', authMiddleware, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
-        const { skill, level, type } = req.query;
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const { skill, level, type, topic, search } = req.query;
 
         let filter = {};
         if (skill) filter.skill = skill;
         if (level) filter.level = level;
         if (type) filter.type = type;
+        if (topic) filter.topicRef = topic;
+
+        if (search) {
+            filter.$or = [
+                { questionText: { $regex: search, $options: 'i' } },
+                { explanation: { $regex: search, $options: 'i' } },
+                { 'options.text': { $regex: search, $options: 'i' } }
+            ];
+        }
 
         const skip = (page - 1) * limit;
         const total = await Exercise.countDocuments(filter);
-        const data = await Exercise.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 });
+        const data = await Exercise.find(filter)
+            .skip(skip)
+            .limit(limit)
+            .sort({ [sortBy]: sortOrder });
 
         res.json({ total, page, limit, totalPages: Math.ceil(total / limit), data });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -883,13 +1148,28 @@ app.get('/api/topics', authMiddleware, async (req, res) => {
     try {
         const { level } = req.query;
         let filter = level ? { level } : {};
+        const { search } = req.query;
 
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 100; // Mặc định lấy nhiều topic
+        const limit = parseInt(req.query.limit) || 100;
+        const sortBy = req.query.sortBy || 'order';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : 1; // default ascending by order
+
+
+
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } }
+            ];
+        }
         const skip = (page - 1) * limit;
 
         const total = await Topic.countDocuments(filter);
-        const data = await Topic.find(filter).sort({ order: 1 }).skip(skip).limit(limit);
+        const data = await Topic.find(filter)
+            .sort({ [sortBy]: sortOrder })
+            .skip(skip)
+            .limit(limit);
 
         res.json({ total, page, limit, totalPages: Math.ceil(total / limit), data });
     } catch (e) { res.status(500).json({ error: e.message }); }
