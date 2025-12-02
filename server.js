@@ -1225,6 +1225,55 @@ app.get('/api/leaderboard', authMiddleware, async (req, res) => {
         res.json(ranked);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
+// Thống kê
+// Thống kê số lượng đăng ký mới trong 7 ngày gần nhất (để vẽ biểu đồ)
+app.get('/api/admin/stats/new-users', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const days = 7;
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days + 1); // Lấy từ 6 ngày trước đến hôm nay
+        startDate.setHours(0, 0, 0, 0); // Reset về đầu ngày
+
+        // 1. Dùng Aggregate để gom nhóm theo ngày
+        const stats = await User.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: startDate } // Chỉ lấy user tạo từ ngày bắt đầu
+                }
+            },
+            {
+                $group: {
+                    // Chuyển đổi createdAt thành chuỗi ngày "YYYY-MM-DD" để gom nhóm
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                    count: { $sum: 1 } // Đếm số lượng
+                }
+            },
+            { $sort: { _id: 1 } } // Sắp xếp ngày tăng dần
+        ]);
+
+        // 2. Xử lý lấp đầy các ngày không có dữ liệu (quan trọng để vẽ biểu đồ đẹp)
+        // MongoDB chỉ trả về những ngày CÓ người đăng ký. Ngày nào 0 người nó sẽ bỏ qua.
+        // Vòng lặp này sẽ tạo danh sách đủ 7 ngày, ngày nào thiếu thì gán bằng 0.
+        const result = [];
+        for (let i = 0; i < days; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() - (days - 1 - i)); // Tính lùi ngày
+            const dateString = d.toISOString().split('T')[0]; // Format YYYY-MM-DD
+
+            const foundData = stats.find(item => item._id === dateString);
+            
+            result.push({
+                date: dateString,
+                count: foundData ? foundData.count : 0
+            });
+        }
+
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 // 404 Handler
 app.use((req, res) => res.status(404).json({ message: 'API Endpoint không tồn tại' }));
 
