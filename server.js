@@ -781,10 +781,25 @@ app.get('/api/grammar', authMiddleware, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const { level, search } = req.query;
 
-        const total = await Grammar.countDocuments();
-        const data = await Grammar.find().skip(skip).limit(limit).sort({ createdAt: -1 });
+        let filter = {};
+        if (level) filter.level = level;
+        if (search) {
+            filter.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { content: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const skip = (page - 1) * limit;
+        const total = await Grammar.countDocuments(filter);
+        const data = await Grammar.find(filter)
+            .sort({ [sortBy]: sortOrder })
+            .skip(skip)
+            .limit(limit);
 
         res.json({ total, page, limit, totalPages: Math.ceil(total / limit), data });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -825,16 +840,30 @@ app.get('/api/exercises', authMiddleware, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
-        const { skill, level, type } = req.query;
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const { skill, level, type, topic, search } = req.query;
 
         let filter = {};
         if (skill) filter.skill = skill;
         if (level) filter.level = level;
         if (type) filter.type = type;
+        if (topic) filter.topicRef = topic;
+
+        if (search) {
+            filter.$or = [
+                { questionText: { $regex: search, $options: 'i' } },
+                { explanation: { $regex: search, $options: 'i' } },
+                { 'options.text': { $regex: search, $options: 'i' } }
+            ];
+        }
 
         const skip = (page - 1) * limit;
         const total = await Exercise.countDocuments(filter);
-        const data = await Exercise.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 });
+        const data = await Exercise.find(filter)
+            .sort({ [sortBy]: sortOrder })
+            .skip(skip)
+            .limit(limit);
 
         res.json({ total, page, limit, totalPages: Math.ceil(total / limit), data });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -873,15 +902,27 @@ app.delete('/api/delet_exercise/:id', authMiddleware, adminMiddleware, async (re
 // --- TOPICS (Có Phân trang) ---
 app.get('/api/topics', authMiddleware, async (req, res) => {
     try {
-        const { level } = req.query;
-        let filter = level ? { level } : {};
-
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 100; // Mặc định lấy nhiều topic
-        const skip = (page - 1) * limit;
+        const sortBy = req.query.sortBy || 'order';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : 1; // default ascending by order
+        const { level, search } = req.query;
 
+        let filter = {};
+        if (level) filter.level = level;
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const skip = (page - 1) * limit;
         const total = await Topic.countDocuments(filter);
-        const data = await Topic.find(filter).sort({ order: 1 }).skip(skip).limit(limit);
+        const data = await Topic.find(filter)
+            .sort({ [sortBy]: sortOrder })
+            .skip(skip)
+            .limit(limit);
 
         res.json({ total, page, limit, totalPages: Math.ceil(total / limit), data });
     } catch (e) { res.status(500).json({ error: e.message }); }
