@@ -7,7 +7,10 @@ const connectDB = require('./config/database');
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+
+// Enable CORS with credentials so HttpOnly cookies can be sent from the frontend.
+// In production, replace origin: true with your specific client origin (e.g. process.env.CLIENT_URL)
+app.use(cors({ origin: true, credentials: true }));
 
 // Kết nối database
 connectDB();
