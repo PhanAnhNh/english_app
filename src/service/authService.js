@@ -1,6 +1,8 @@
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const User = require('../model/User');
-const { createToken } = require('../utils/jwt');
+const RefreshToken = require('../model/RefreshToken');
+const { createAccessToken, createRefreshToken } = require('../utils/jwt');
 
 const register = async (userData) => {
     const { fullname, username, password, role = 'student', email } = userData;
@@ -28,12 +30,28 @@ const register = async (userData) => {
     });
     await user.save();
 
-    // Tạo token
-    const token = createToken({
+    // Tạo tokens
+    const accessToken = createAccessToken({
         id: user._id,
         username: user.username,
         fullname: user.fullname,
         role: user.role
+    });
+
+    const refreshToken = createRefreshToken({
+        id: user._id,
+        username: user.username
+    });
+
+    // Lưu refresh token vào database
+    const refreshTokenExpires = new Date();
+    refreshTokenExpires.setDate(refreshTokenExpires.getDate() + 7); // 7 ngày
+
+    await RefreshToken.create({
+        userId: user._id,
+        token: refreshToken,
+        expiresAt: refreshTokenExpires,
+        deviceInfo: userData.deviceInfo || {}
     });
 
     return {
@@ -45,22 +63,44 @@ const register = async (userData) => {
             role: user.role,
             email: user.email
         },
-        token
+        accessToken,
+        refreshToken
     };
 };
 
-const login = async (username, password) => {
+const login = async (username, password, deviceInfo = {}) => {
     const user = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
         throw new Error('Sai username hoặc password');
     }
 
-    const token = createToken({
+    // Tạo tokens
+    const accessToken = createAccessToken({
         id: user._id,
         username: user.username,
         fullname: user.fullname,
         role: user.role
+    });
+
+    const refreshToken = createRefreshToken({
+        id: user._id,
+        username: user.username
+    });
+
+    // Lưu refresh token vào database
+    const refreshTokenExpires = new Date();
+    refreshTokenExpires.setDate(refreshTokenExpires.getDate() + 7); // 7 ngày
+
+    await RefreshToken.create({
+        userId: user._id,
+        token: refreshToken,
+        expiresAt: refreshTokenExpires,
+        deviceInfo: {
+            userAgent: deviceInfo.userAgent,
+            ipAddress: deviceInfo.ipAddress,
+            deviceType: deviceInfo.deviceType || 'mobile'
+        }
     });
 
     return {
@@ -71,11 +111,12 @@ const login = async (username, password) => {
             fullname: user.fullname,
             role: user.role
         },
-        token
+        accessToken,
+        refreshToken
     };
 };
 
-const adminLogin = async (username, password) => {
+const adminLogin = async (username, password, deviceInfo = {}) => {
     const user = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
@@ -87,11 +128,32 @@ const adminLogin = async (username, password) => {
         throw new Error('Chỉ Admin được phép đăng nhập vào web admin');
     }
 
-    const token = createToken({
+    // Tạo tokens
+    const accessToken = createAccessToken({
         id: user._id,
         username: user.username,
         fullname: user.fullname,
         role: user.role
+    });
+
+    const refreshToken = createRefreshToken({
+        id: user._id,
+        username: user.username
+    });
+
+    // Lưu refresh token vào database
+    const refreshTokenExpires = new Date();
+    refreshTokenExpires.setDate(refreshTokenExpires.getDate() + 7); // 7 ngày
+
+    await RefreshToken.create({
+        userId: user._id,
+        token: refreshToken,
+        expiresAt: refreshTokenExpires,
+        deviceInfo: {
+            userAgent: deviceInfo.userAgent,
+            ipAddress: deviceInfo.ipAddress,
+            deviceType: deviceInfo.deviceType || 'web'
+        }
     });
 
     return {
@@ -102,8 +164,84 @@ const adminLogin = async (username, password) => {
             fullname: user.fullname,
             role: user.role
         },
-        token
+        accessToken,
+        refreshToken
     };
+};
+
+const refreshAccessToken = async (refreshTokenString) => {
+    // Verify refresh token
+    const { verifyRefreshToken } = require('../utils/jwt');
+    let decoded;
+    try {
+        decoded = verifyRefreshToken(refreshTokenString);
+    } catch (error) {
+        throw new Error('Refresh token không hợp lệ hoặc đã hết hạn');
+    }
+
+    // Kiểm tra refresh token trong database
+    const refreshTokenDoc = await RefreshToken.findOne({
+        token: refreshTokenString,
+        userId: decoded.id,
+        isRevoked: false
+    });
+
+    if (!refreshTokenDoc) {
+        throw new Error('Refresh token không tồn tại hoặc đã bị thu hồi');
+    }
+
+    // Kiểm tra token đã hết hạn chưa
+    if (refreshTokenDoc.expiresAt < new Date()) {
+        await RefreshToken.findByIdAndUpdate(refreshTokenDoc._id, { isRevoked: true });
+        throw new Error('Refresh token đã hết hạn');
+    }
+
+    // Lấy thông tin user
+    const user = await User.findById(decoded.id);
+    if (!user) {
+        throw new Error('Người dùng không tồn tại');
+    }
+
+    // Tạo access token mới
+    const newAccessToken = createAccessToken({
+        id: user._id,
+        username: user.username,
+        fullname: user.fullname,
+        role: user.role
+    });
+
+    return {
+        accessToken: newAccessToken,
+        user: {
+            id: user._id,
+            username: user.username,
+            fullname: user.fullname,
+            role: user.role
+        }
+    };
+};
+
+const revokeRefreshToken = async (refreshTokenString, userId) => {
+    const refreshToken = await RefreshToken.findOne({
+        token: refreshTokenString,
+        userId: userId
+    });
+
+    if (refreshToken) {
+        refreshToken.isRevoked = true;
+        await refreshToken.save();
+    }
+
+    return { message: 'Đã đăng xuất thành công' };
+};
+
+const revokeAllUserTokens = async (userId) => {
+    await RefreshToken.updateMany(
+        { userId, isRevoked: false },
+        { isRevoked: true }
+    );
+
+    return { message: 'Đã đăng xuất tất cả thiết bị' };
 };
 
 const getMe = async (userId) => {
@@ -115,6 +253,8 @@ module.exports = {
     register,
     login,
     adminLogin,
+    refreshAccessToken,
+    revokeRefreshToken,
+    revokeAllUserTokens,
     getMe
 };
-

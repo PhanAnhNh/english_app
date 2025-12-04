@@ -3,11 +3,16 @@ const router = express.Router();
 const authController = require('../controller/authController');
 const authMiddleware = require('../middleware/auth');
 
+// Public routes
 router.post('/register', authController.register);
-router.post('/login', authController.login);
-router.post('/admin/login', authController.adminLogin);
+router.post('/login', authController.login); // Flutter app
+router.post('/admin/login', authController.adminLogin); // Web admin
+router.post('/refresh-token', authController.refreshToken); // Refresh access token
+
+// Protected routes
 router.get('/me', authMiddleware, authController.getMe);
-router.post('/logout', authController.logout);
+router.post('/logout', authMiddleware, authController.logout);
+router.post('/logout-all', authMiddleware, authController.logoutAll);
 
 module.exports = router;
 
