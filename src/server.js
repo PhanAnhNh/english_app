@@ -59,7 +59,7 @@ app.use('/api', adminRoutes);
 app.use('/api', achievementRoutes);
 app.use('/api', searchRoutes);
 app.use('/api/user-vocabulary', userVocabularyRoutes);
-app.use('/api/grammar-exercises', grammarExerciseRoutes);
+app.use('/api', grammarExerciseRoutes);
 
 // 404 Handler
 app.use((req, res) => res.status(404).json({ message: 'API Endpoint không tồn tại' }));
