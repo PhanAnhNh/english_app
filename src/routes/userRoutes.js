@@ -3,7 +3,7 @@ const router = express.Router();
 const userController = require('../controller/userController');
 const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
-const upload = require('../middleware/upload.middleware');
+
 
 // Admin routes
 router.post('/admin/add_users', authMiddleware, adminMiddleware, userController.addUser);
@@ -16,7 +16,7 @@ router.get('/admin/users-stats', authMiddleware, adminMiddleware, userController
 router.get('/admin/stats/new-users', authMiddleware, adminMiddleware, userController.getNewUsersStats);
 
 // User routes
-router.put('/profile', authMiddleware, upload.single('avatar'), userController.updateProfile);
+router.put('/profile', authMiddleware, userController.updateProfile);
 router.put('/change-password', authMiddleware, userController.changePassword);
 router.get('/profile', authMiddleware, userController.getProfile);
 
