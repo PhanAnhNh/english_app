@@ -1,0 +1,17 @@
+const mongoose = require('mongoose');
+
+const ExerciseSchema = new mongoose.Schema({
+    skill: String, // vocab, grammar, listening
+    type: String, // multiple_choice, fill_in_blank
+    questionText: String,
+    audioUrl: String,
+    options: [{ text: String, isCorrect: Boolean }], // Mảng object đáp án
+    correctAnswer: String,
+    explanation: String,
+    level: String,
+    topicRef: String,
+    createdAt: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model('exercises', ExerciseSchema);
+

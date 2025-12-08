@@ -1,0 +1,188 @@
+const authService = require('../service/authService');
+
+const COOKIE_MAX_AGE = parseInt(process.env.COOKIE_MAX_AGE) || 30 * 24 * 60 * 60 * 1000; // 30 days default
+
+const cookieOptions = () => ({
+    httpOnly: true,
+    secure: process.env.COOKIE_SECURE === 'false' ? false : process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: COOKIE_MAX_AGE
+});
+
+// Helper để lấy device info từ request
+const getDeviceInfo = (req) => {
+    return {
+        userAgent: req.headers['user-agent'] || '',
+        ipAddress: req.ip || req.connection.remoteAddress || '',
+        deviceType: req.body.deviceType || 'mobile'
+    };
+};
+
+// Register - trả về tokens cho Flutter app, không set cookie
+const register = async (req, res) => {
+    try {
+        const deviceInfo = getDeviceInfo(req);
+        const result = await authService.register({ ...req.body, deviceInfo });
+        // Không set cookie, chỉ trả về tokens trong response body cho Flutter app
+        res.json({ 
+            message: result.message, 
+            user: result.user, 
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken
+        });
+    } catch (e) {
+        res.status(400).json({ message: e.message });
+    }
+};
+
+// Login cho Flutter app - chỉ trả về tokens, KHÔNG set cookie
+const login = async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const deviceInfo = getDeviceInfo(req);
+        const result = await authService.login(username, password, deviceInfo);
+        // Không set cookie, chỉ trả về tokens trong response body cho Flutter app
+        res.json({ 
+            message: result.message, 
+            user: result.user, 
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken
+        });
+    } catch (e) {
+        res.status(400).json({ message: e.message });
+    }
+};
+
+// Login cho Web Admin - set cookies cho cả access và refresh token
+const adminLogin = async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const deviceInfo = getDeviceInfo(req);
+        deviceInfo.deviceType = 'web'; // Force web type for admin
+        const result = await authService.adminLogin(username, password, deviceInfo);
+        
+        // Set cookies cho web admin (HttpOnly, Secure)
+        if (result && result.accessToken) {
+            res.cookie('accessToken', result.accessToken, cookieOptions());
+        }
+        if (result && result.refreshToken) {
+            res.cookie('refreshToken', result.refreshToken, cookieOptions());
+        }
+        
+        // Không trả về tokens trong body để bảo mật
+        res.json({ 
+            message: result.message, 
+            user: result.user
+            // Không trả về tokens để tránh lộ token trong response
+        });
+    } catch (e) {
+        const statusCode = e.message.includes('Chỉ Admin') ? 403 : 400;
+        res.status(statusCode).json({ message: e.message });
+    }
+};
+
+// Refresh access token
+const refreshToken = async (req, res) => {
+    try {
+        let refreshTokenString = null;
+
+        // Kiểm tra refresh token từ cookie (web admin) hoặc body (Flutter app)
+        if (req.cookies && req.cookies.refreshToken) {
+            refreshTokenString = req.cookies.refreshToken;
+        } else if (req.body.refreshToken) {
+            refreshTokenString = req.body.refreshToken;
+        } else {
+            return res.status(400).json({ message: 'Thiếu refresh token' });
+        }
+
+        const result = await authService.refreshAccessToken(refreshTokenString);
+
+        // Nếu là web admin (có cookie), set lại access token cookie
+        if (req.cookies && req.cookies.refreshToken) {
+            res.cookie('accessToken', result.accessToken, cookieOptions());
+        }
+
+        res.json({
+            accessToken: result.accessToken,
+            user: result.user
+        });
+    } catch (e) {
+        res.status(401).json({ message: e.message });
+    }
+};
+
+const getMe = async (req, res) => {
+    try {
+        const user = await authService.getMe(req.user.id);
+        res.json(user);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+// Logout - revoke refresh token
+const logout = async (req, res) => {
+    try {
+        let refreshTokenString = null;
+
+        // Lấy refresh token từ cookie hoặc body
+        if (req.cookies && req.cookies.refreshToken) {
+            refreshTokenString = req.cookies.refreshToken;
+        } else if (req.body.refreshToken) {
+            refreshTokenString = req.body.refreshToken;
+        }
+
+        if (refreshTokenString) {
+            await authService.revokeRefreshToken(refreshTokenString, req.user.id);
+        }
+
+        // Clear cookies cho web admin
+        res.clearCookie('accessToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+        });
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+        });
+
+        res.json({ message: 'Đã đăng xuất thành công' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+// Logout tất cả thiết bị
+const logoutAll = async (req, res) => {
+    try {
+        await authService.revokeAllUserTokens(req.user.id);
+        
+        // Clear cookies
+        res.clearCookie('accessToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+        });
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+        });
+
+        res.json({ message: 'Đã đăng xuất tất cả thiết bị' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+module.exports = {
+    register,
+    login,
+    adminLogin,
+    refreshToken,
+    getMe,
+    logout,
+    logoutAll
+};
