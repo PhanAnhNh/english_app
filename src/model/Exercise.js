@@ -5,7 +5,6 @@ const ExerciseSchema = new mongoose.Schema({
     type: String, // multiple_choice, fill_in_blank
     questionText: String,
     audioUrl: String,
-
     options: [{ text: String, isCorrect: Boolean }], // Mảng object đáp án
     correctAnswer: String,
     explanation: String,

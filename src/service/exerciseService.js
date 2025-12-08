@@ -1,6 +1,5 @@
 const Exercise = require('../model/Exercise');
 
-
 const getExercises = async (filters) => {
     const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, search } = filters;
 
@@ -34,14 +33,12 @@ const getExerciseById = async (exerciseId) => {
 };
 
 const createExercise = async (exerciseData) => {
-
     const item = new Exercise(exerciseData);
     await item.save();
     return item;
 };
 
 const updateExercise = async (exerciseId, exerciseData) => {
-
     const updated = await Exercise.findByIdAndUpdate(exerciseId, exerciseData, { new: true });
     return updated;
 };

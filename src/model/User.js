@@ -9,7 +9,6 @@ const UserSchema = new mongoose.Schema({
     fullname: { type: String, required: true },
     avatarUrl: String,
 
-
     // Gamification
     xp: { type: Number, default: 0 },
     gems: { type: Number, default: 0 },

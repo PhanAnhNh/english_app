@@ -4,7 +4,6 @@ const vocabularyController = require('../controller/vocabularyController');
 const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
 
-
 router.get('/vocab', authMiddleware, vocabularyController.getVocabularies);
 router.get('/detail_vocab/:id', authMiddleware, vocabularyController.getVocabularyById);
 router.post('/vocab', authMiddleware, adminMiddleware, vocabularyController.createVocabulary);

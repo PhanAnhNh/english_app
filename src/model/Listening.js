@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const ListeningSchema = new mongoose.Schema({
     title: String,
     audioUrl: { type: String, required: true },
-
     transcript: String,
     level: String,
     topic: String,

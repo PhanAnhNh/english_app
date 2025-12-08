@@ -4,7 +4,6 @@ const topicController = require('../controller/topicController');
 const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
 
-
 router.get('/topics', authMiddleware, topicController.getTopics);
 router.get('/detail_topics/:id', authMiddleware, topicController.getTopicById);
 router.post('/topics', authMiddleware, adminMiddleware, topicController.createTopic);

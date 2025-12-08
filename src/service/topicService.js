@@ -1,6 +1,5 @@
 const Topic = require('../model/Topic');
 
-
 const getTopics = async (filters) => {
     const { page = 1, limit = 100, sortBy = 'createdAt', sortOrder = 'asc', level } = filters;
     let filter = level ? { level } : {};
@@ -26,14 +25,12 @@ const getTopicById = async (topicId) => {
 };
 
 const createTopic = async (topicData) => {
-
     const topic = new Topic(topicData);
     await topic.save();
     return topic;
 };
 
 const updateTopic = async (topicId, topicData) => {
-
     const updated = await Topic.findByIdAndUpdate(topicId, topicData, { new: true });
     return updated;
 };

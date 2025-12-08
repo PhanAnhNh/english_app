@@ -1,7 +1,6 @@
 const Vocabulary = require('../model/Vocabulary');
 const AdminLog = require('../model/AdminLog');
 
-
 const getVocabularies = async (filters) => {
     const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', level, topic, search } = filters;
 
@@ -40,7 +39,6 @@ const getVocabularyById = async (vocabId) => {
 };
 
 const createVocabulary = async (vocabData, adminId) => {
-
     const item = new Vocabulary(vocabData);
     await item.save();
     await AdminLog.create({ adminId, action: 'create_vocab', meta: { id: item._id } });
@@ -48,7 +46,6 @@ const createVocabulary = async (vocabData, adminId) => {
 };
 
 const updateVocabulary = async (vocabId, vocabData) => {
-
     const updated = await Vocabulary.findByIdAndUpdate(vocabId, vocabData, { new: true });
     return updated;
 };
