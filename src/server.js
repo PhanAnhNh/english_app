@@ -11,8 +11,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // Để đọc cookies từ request
 
 // Enable CORS with credentials so HttpOnly cookies can be sent from the frontend.
-// In production, replace origin: true with your specific client origin (e.g. process.env.CLIENT_URL)
-app.use(cors({ origin: true, credentials: true }));
+// In production, set CLIENT_URL in .env to your frontend domain
+const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ['http://localhost:5173', 'http://localhost:3000'];
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
 
 // Kết nối database
 connectDB();

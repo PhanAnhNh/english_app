@@ -5,8 +5,9 @@ const COOKIE_MAX_AGE = parseInt(process.env.COOKIE_MAX_AGE) || 30 * 24 * 60 * 60
 const cookieOptions = () => ({
     httpOnly: true,
     secure: process.env.COOKIE_SECURE === 'false' ? false : process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: COOKIE_MAX_AGE
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' cho cross-domain trong production
+    maxAge: COOKIE_MAX_AGE,
+    ...(process.env.COOKIE_DOMAIN && { domain: process.env.COOKIE_DOMAIN }) // Optional: set domain nếu cần
 });
 
 // Helper để lấy device info từ request
@@ -24,9 +25,9 @@ const register = async (req, res) => {
         const deviceInfo = getDeviceInfo(req);
         const result = await authService.register({ ...req.body, deviceInfo });
         // Không set cookie, chỉ trả về tokens trong response body cho Flutter app
-        res.json({ 
-            message: result.message, 
-            user: result.user, 
+        res.json({
+            message: result.message,
+            user: result.user,
             accessToken: result.accessToken,
             refreshToken: result.refreshToken
         });
@@ -42,9 +43,9 @@ const login = async (req, res) => {
         const deviceInfo = getDeviceInfo(req);
         const result = await authService.login(username, password, deviceInfo);
         // Không set cookie, chỉ trả về tokens trong response body cho Flutter app
-        res.json({ 
-            message: result.message, 
-            user: result.user, 
+        res.json({
+            message: result.message,
+            user: result.user,
             accessToken: result.accessToken,
             refreshToken: result.refreshToken
         });
@@ -60,7 +61,7 @@ const adminLogin = async (req, res) => {
         const deviceInfo = getDeviceInfo(req);
         deviceInfo.deviceType = 'web'; // Force web type for admin
         const result = await authService.adminLogin(username, password, deviceInfo);
-        
+
         // Set cookies cho web admin (HttpOnly, Secure)
         if (result && result.accessToken) {
             res.cookie('accessToken', result.accessToken, cookieOptions());
@@ -68,10 +69,10 @@ const adminLogin = async (req, res) => {
         if (result && result.refreshToken) {
             res.cookie('refreshToken', result.refreshToken, cookieOptions());
         }
-        
+
         // Không trả về tokens trong body để bảo mật
-        res.json({ 
-            message: result.message, 
+        res.json({
+            message: result.message,
             user: result.user
             // Không trả về tokens để tránh lộ token trong response
         });
@@ -140,12 +141,12 @@ const logout = async (req, res) => {
         res.clearCookie('accessToken', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
         });
         res.clearCookie('refreshToken', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
         });
 
         res.json({ message: 'Đã đăng xuất thành công' });
@@ -158,17 +159,17 @@ const logout = async (req, res) => {
 const logoutAll = async (req, res) => {
     try {
         await authService.revokeAllUserTokens(req.user.id);
-        
+
         // Clear cookies
         res.clearCookie('accessToken', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
         });
         res.clearCookie('refreshToken', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
         });
 
         res.json({ message: 'Đã đăng xuất tất cả thiết bị' });
