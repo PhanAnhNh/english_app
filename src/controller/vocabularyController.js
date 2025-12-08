@@ -20,7 +20,7 @@ const getVocabularyById = async (req, res) => {
 
 const createVocabulary = async (req, res) => {
     try {
-        const item = await vocabularyService.createVocabulary(req.body, req.user.id);
+        const item = await vocabularyService.createVocabulary(req.body, req.user.id, req.files);
         res.json(item);
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -29,7 +29,7 @@ const createVocabulary = async (req, res) => {
 
 const updateVocabulary = async (req, res) => {
     try {
-        const updated = await vocabularyService.updateVocabulary(req.params.id, req.body);
+        const updated = await vocabularyService.updateVocabulary(req.params.id, req.body, req.files);
         res.json(updated);
     } catch (e) {
         res.status(500).json({ error: e.message });

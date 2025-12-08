@@ -10,6 +10,8 @@ const VocabularySchema = new mongoose.Schema({
     example: String,
     audioUrl: String,
     imageUrl: String,
+    cloudinaryAudioId: String, // Public ID để xóa file audio trên Cloudinary
+    cloudinaryImageId: String, // Public ID để xóa file image trên Cloudinary
     createdAt: { type: Date, default: Date.now }
 });
 

@@ -8,6 +8,7 @@ const UserSchema = new mongoose.Schema({
     level: { type: String, default: 'A' },
     fullname: { type: String, required: true },
     avatarUrl: String,
+    cloudinaryAvatarId: String,
 
     // Gamification
     xp: { type: Number, default: 0 },

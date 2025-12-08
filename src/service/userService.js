@@ -219,8 +219,13 @@ const getUsersStats = async () => {
     };
 };
 
-const updateProfile = async (userId, profileData) => {
+const updateProfile = async (userId, profileData, files) => {
     const { fullname, email, level, avatarUrl } = profileData;
+
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new Error('Không tìm thấy người dùng');
+    }
 
     // Chỉ cho phép update các field không nhạy cảm
     const updateData = {
@@ -229,6 +234,23 @@ const updateProfile = async (userId, profileData) => {
         ...(level && { level }),
         ...(avatarUrl && { avatarUrl })
     };
+
+    // Upload avatar mới nếu có
+    if (files && files.avatar && files.avatar[0]) {
+        const { uploadImage, deleteFile } = require('../utils/cloudinaryHelper');
+
+        // Xóa avatar cũ
+        if (user.cloudinaryAvatarId) {
+            await deleteFile(user.cloudinaryAvatarId, 'image');
+        }
+        // Upload avatar mới
+        const imageResult = await uploadImage(
+            files.avatar[0].buffer,
+            'english_app/users/avatars'
+        );
+        updateData.avatarUrl = imageResult.url;
+        updateData.cloudinaryAvatarId = imageResult.publicId;
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
         userId,

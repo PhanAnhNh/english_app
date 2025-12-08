@@ -1,4 +1,5 @@
 const Exercise = require('../model/Exercise');
+const { uploadAudio, deleteFile } = require('../utils/cloudinaryHelper');
 
 const getExercises = async (filters) => {
     const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, search } = filters;
@@ -32,18 +33,58 @@ const getExerciseById = async (exerciseId) => {
     return item;
 };
 
-const createExercise = async (exerciseData) => {
+const createExercise = async (exerciseData, files) => {
+    // Upload audio nếu có
+    if (files && files.audio && files.audio[0]) {
+        const audioResult = await uploadAudio(
+            files.audio[0].buffer,
+            'english_app/exercises/audio'
+        );
+        exerciseData.audioUrl = audioResult.url;
+        exerciseData.cloudinaryAudioId = audioResult.publicId;
+    }
+
     const item = new Exercise(exerciseData);
     await item.save();
     return item;
 };
 
-const updateExercise = async (exerciseId, exerciseData) => {
+const updateExercise = async (exerciseId, exerciseData, files) => {
+    const exercise = await Exercise.findById(exerciseId);
+    if (!exercise) {
+        throw new Error('Không tìm thấy bài tập');
+    }
+
+    // Upload audio mới nếu có
+    if (files && files.audio && files.audio[0]) {
+        // Xóa audio cũ
+        if (exercise.cloudinaryAudioId) {
+            await deleteFile(exercise.cloudinaryAudioId, 'video');
+        }
+        // Upload audio mới
+        const audioResult = await uploadAudio(
+            files.audio[0].buffer,
+            'english_app/exercises/audio'
+        );
+        exerciseData.audioUrl = audioResult.url;
+        exerciseData.cloudinaryAudioId = audioResult.publicId;
+    }
+
     const updated = await Exercise.findByIdAndUpdate(exerciseId, exerciseData, { new: true });
     return updated;
 };
 
 const deleteExercise = async (exerciseId) => {
+    const exercise = await Exercise.findById(exerciseId);
+    if (!exercise) {
+        throw new Error('Không tìm thấy bài tập');
+    }
+
+    // Xóa audio trên Cloudinary
+    if (exercise.cloudinaryAudioId) {
+        await deleteFile(exercise.cloudinaryAudioId, 'video');
+    }
+
     await Exercise.findByIdAndDelete(exerciseId);
     return { message: 'Đã xóa thành công' };
 };

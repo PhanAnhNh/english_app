@@ -20,7 +20,7 @@ const getTopicById = async (req, res) => {
 
 const createTopic = async (req, res) => {
     try {
-        const topic = await topicService.createTopic(req.body);
+        const topic = await topicService.createTopic(req.body, req.files);
         res.json(topic);
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -29,7 +29,7 @@ const createTopic = async (req, res) => {
 
 const updateTopic = async (req, res) => {
     try {
-        const updated = await topicService.updateTopic(req.params.id, req.body);
+        const updated = await topicService.updateTopic(req.params.id, req.body, req.files);
         res.json(updated);
     } catch (e) {
         res.status(500).json({ error: e.message });
