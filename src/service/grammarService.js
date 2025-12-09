@@ -2,10 +2,17 @@ const Grammar = require('../model/Grammar');
 const GrammarCategory = require('../model/GrammarCategory');
 
 const getGrammars = async (filters) => {
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', level, search } = filters;
+    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', level, search, categoryId } = filters;
 
     let filter = {};
+
+    // Filter by level
     if (level) filter.level = level;
+
+    // Filter by categoryId
+    if (categoryId) filter.categoryId = categoryId;
+
+    // Filter by search (title or content)
     if (search) {
         filter.$or = [
             { title: { $regex: search, $options: 'i' } },
@@ -14,8 +21,16 @@ const getGrammars = async (filters) => {
     }
 
     const skip = (page - 1) * limit;
-    const total = await Grammar.countDocuments();
-    const data = await Grammar.find().skip(skip).limit(limit).sort({ createdAt: -1 });
+
+    // Count total with filters applied
+    const total = await Grammar.countDocuments(filter);
+
+    // Find with filters, then paginate
+    const data = await Grammar.find(filter)
+        .populate('categoryId')  // Populate categoryId để frontend có thể hiển thị và filter
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
 
     return { total, page, limit, totalPages: Math.ceil(total / limit), data };
 };
