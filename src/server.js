@@ -10,8 +10,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // Để đọc cookies từ request
 
-// Enable CORS with credentials so HttpOnly cookies can be sent from the frontend.
-// In production, replace origin: true with your specific client origin (e.g. process.env.CLIENT_URL)
 const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ['http://localhost:5173', 'http://localhost:3000'];
 app.use(cors({
     origin: (origin, callback) => {
