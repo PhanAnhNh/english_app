@@ -12,7 +12,7 @@ app.use(cookieParser()); // Để đọc cookies từ request
 
 // Enable CORS with credentials so HttpOnly cookies can be sent from the frontend.
 // In production, set CLIENT_URL in .env to your frontend domain
-const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ['http://localhost:5173', 'http://localhost:3000'];
+const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ['http://localhost:5173', 'http://localhost:3000'] || ['http://localhost:5174', 'http://localhost:3000'];
 app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (mobile apps, Postman, etc.)
@@ -44,6 +44,7 @@ const achievementRoutes = require('./routes/achievementRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const userVocabularyRoutes = require('./routes/userVocabularyRoutes');
 const grammarExerciseRoutes = require('./routes/grammarExerciseRoutes');
+const landingPageRoutes = require('./routes/landingPageRoutes');
 
 // Sử dụng routes
 app.use('/api', authRoutes);
@@ -60,6 +61,7 @@ app.use('/api', achievementRoutes);
 app.use('/api', searchRoutes);
 app.use('/api/user-vocabulary', userVocabularyRoutes);
 app.use('/api', grammarExerciseRoutes);
+app.use('/api/landing-page', landingPageRoutes);
 
 // 404 Handler
 app.use((req, res) => res.status(404).json({ message: 'API Endpoint không tồn tại' }));
