@@ -1,13 +1,13 @@
 const Exercise = require('../model/Exercise');
 
 const getExercises = async (filters) => {
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, search } = filters;
+    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, topicRef, search } = filters;
 
     let filter = {};
     if (skill) filter.skill = skill;
     if (level) filter.level = level;
     if (type) filter.type = type;
-    if (topic) filter.topicRef = topic;
+    if (topic || topicRef) filter.topicRef = topic || topicRef;
 
     if (search) {
         filter.$or = [
