@@ -4,34 +4,48 @@ const UserVocabulary = require('../model/UserVocabulary'); // Import model bạn
 // Hàm thêm từ vào từ điển cá nhân
 exports.addToDictionary = async (req, res) => {
     try {
-        const { vocabularyId } = req.body; // Lấy ID của từ vựng gửi từ Frontend
-        const userId = req.user.id; // Lấy ID của user từ Token (Middleware xác thực)
+        const { vocabularyId } = req.body;
+        const userId = req.user.id;
 
         if (!vocabularyId) {
             return res.status(400).json({ success: false, message: "Thiếu ID từ vựng" });
         }
 
-        const userVocab = await UserVocabulary.findOneAndUpdate(
-            { user: userId, vocabulary: vocabularyId }, // Điều kiện tìm
-            {
-                status: 'memorized', // Mặc định trạng thái là đang học
-                learnedAt: new Date()
-            }, // Dữ liệu cập nhật/tạo mới
-            { new: true, upsert: true } // Option: trả về dữ liệu mới nhất, tạo nếu chưa có
-        );
+        // Tìm xem đã có trong từ điển chưa
+        let userVocab = await UserVocabulary.findOne({ user: userId, vocabulary: vocabularyId });
 
-        return res.status(200).json({
-            success: true,
-            message: "Đã thêm vào từ điển của bạn thành công!",
-            data: userVocab
-        });
+        if (userVocab) {
+            // Nếu đã có rồi, chỉ update lại thời gian hoặc đánh dấu yêu thích (tùy chọn)
+            // Nếu bạn muốn reset về learning thì giữ nguyên code cũ.
+            // Nếu muốn giữ nguyên trạng thái (ví dụ đang memorized thì kệ nó), dùng code này:
+            userVocab.learnedAt = new Date();
+            // userVocab.status = 'learning'; // <--- Bỏ dòng này nếu không muốn user bị reset việc học
+            await userVocab.save();
+
+            return res.status(200).json({
+                success: true,
+                message: "Từ này đã có trong từ điển của bạn.",
+                data: userVocab
+            });
+        } else {
+            // Nếu chưa có thì tạo mới với status learning
+            userVocab = await UserVocabulary.create({
+                user: userId,
+                vocabulary: vocabularyId,
+                status: 'memorized', // Mới thêm vào thì là đang học
+                learnedAt: new Date()
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "Đã thêm vào từ điển thành công!",
+                data: userVocab
+            });
+        }
 
     } catch (error) {
         console.error("Lỗi thêm từ vựng:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Lỗi server khi thêm từ vựng"
-        });
+        return res.status(500).json({ success: false, message: "Lỗi server" });
     }
 };
 
