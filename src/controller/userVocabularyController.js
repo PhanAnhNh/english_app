@@ -11,10 +11,6 @@ exports.addToDictionary = async (req, res) => {
             return res.status(400).json({ success: false, message: "Thiếu ID từ vựng" });
         }
 
-        // Sử dụng findOneAndUpdate với option upsert: true
-        // Nghĩa là: Tìm xem user này đã lưu từ này chưa.
-        // - Nếu tìm thấy: Cập nhật lại ngày học (learnedAt).
-        // - Nếu chưa tìm thấy: Tạo bản ghi mới.
         const userVocab = await UserVocabulary.findOneAndUpdate(
             { user: userId, vocabulary: vocabularyId }, // Điều kiện tìm
             {
@@ -43,9 +39,6 @@ exports.getUserDictionary = async (req, res) => {
     try {
         // Lấy ID của user từ Token (Middleware xác thực đã gắn vào req.user)
         const userId = req.user.id;
-
-        // 1. Tìm kiếm tất cả các bản ghi UserVocabulary của người dùng hiện tại
-        // 2. Sử dụng .populate('vocabulary') để lấy đầy đủ thông tin từ Model Vocabulary
         const userDictionary = await UserVocabulary.find({ user: userId })
             .populate('vocabulary') // Giả định trường 'vocabulary' trong UserVocabulary là ObjectId trỏ tới Vocabulary Model
             .lean(); // Sử dụng .lean() để trả về plain JavaScript objects, giúp tăng hiệu suất
@@ -87,8 +80,6 @@ exports.getUserDictionary = async (req, res) => {
 // Xóa từ vựng khỏi từ điển cá nhân
 exports.deleteFromDictionary = async (req, res) => {
     try {
-        // Lấy ID bản ghi UserVocabulary (userVocabId) từ params hoặc body.
-        // Dùng params (DELETE /api/user/dictionary/:id) là chuẩn RESTful hơn.
         const userVocabId = req.params.id;
         const userId = req.user.id;
 
@@ -96,7 +87,6 @@ exports.deleteFromDictionary = async (req, res) => {
             return res.status(400).json({ success: false, message: "Thiếu ID bản ghi cần xóa" });
         }
 
-        // Tìm và xóa bản ghi, đảm bảo chỉ user sở hữu mới được xóa
         const result = await UserVocabulary.findOneAndDelete({
             _id: userVocabId,
             user: userId
@@ -131,7 +121,6 @@ exports.updateVocabStatus = async (req, res) => {
             return res.status(400).json({ success: false, message: "Thiếu ID bản ghi hoặc trạng thái mới" });
         }
 
-        // Tìm và cập nhật bản ghi UserVocabulary, đảm bảo chỉ user sở hữu mới được sửa
         const userVocab = await UserVocabulary.findOneAndUpdate(
             { _id: userVocabId, user: userId },
             { status: newStatus },

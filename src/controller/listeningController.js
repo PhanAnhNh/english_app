@@ -1,4 +1,4 @@
-const Listening = require('../service/listeninService'); // Đường dẫn tới file model của bạn
+const Listening = require('../model/Listening'); // Đường dẫn tới file model của bạn
 
 // 1. Tạo mới một bài nghe (CREATE)
 exports.createListening = async (req, res) => {
@@ -13,19 +13,72 @@ exports.createListening = async (req, res) => {
 
 // 2. Lấy danh sách bài nghe (READ ALL)
 // Hỗ trợ lọc theo level và topic: /api/listenings?level=B1&topic=Travel
+// 2. Lấy danh sách bài nghe (READ ALL) - Đã sửa lỗi sắp xếp và phân trang
 exports.getAllListenings = async (req, res) => {
     try {
-        const { level, topic } = req.query;
-        let query = {};
+        // 1. Lấy tất cả tham số từ URL (query string)
+        const {
+            page = 1,
+            limit = 10,
+            sortBy = 'createdAt', // Mặc định sắp xếp theo ngày tạo
+            sortOrder = 'desc',   // Mặc định giảm dần
+            level,
+            topic,
+            search
+        } = req.query;
 
-        // Nếu có param level hoặc topic trên URL thì thêm vào điều kiện lọc
-        if (level) query.level = level;
-        if (topic) query.topic = topic;
+        let filter = {};
 
-        const listenings = await Listening.find(query).sort({ createdAt: -1 }); // Mới nhất lên đầu
-        res.status(200).json(listenings);
+        // 2. Xây dựng bộ lọc (Filter)
+        if (level) filter.level = level;
+        if (topic) filter.topic = topic;
+
+        // Tìm kiếm (Search)
+        if (search) {
+            filter.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { transcript: { $regex: search, $options: 'i' } },
+            ];
+        }
+
+        // 3. Xử lý sắp xếp (Sort)
+        const sortOptions = {};
+        // Nếu sortOrder là 'asc' thì 1, ngược lại là -1
+        sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+        // 4. Tính toán phân trang (Pagination)
+        const pageNumber = parseInt(page);
+        const limitNumber = parseInt(limit);
+        const skip = (pageNumber - 1) * limitNumber;
+
+        // 5. Query Database
+        // Đếm tổng số lượng bản ghi thỏa mãn điều kiện lọc
+        const total = await Listening.countDocuments(filter);
+
+        // Lấy dữ liệu
+        const listenings = await Listening.find(filter)
+            .sort(sortOptions)      // Áp dụng sắp xếp động
+            .skip(skip)             // Bỏ qua số lượng bản ghi trang trước
+            .limit(limitNumber);    // Giới hạn số lượng bản ghi trả về
+
+        // 6. Trả về kết quả kèm thông tin phân trang
+        res.status(200).json({
+            success: true,
+            pagination: {
+                total,
+                page: pageNumber,
+                limit: limitNumber,
+                totalPages: Math.ceil(total / limitNumber)
+            },
+            data: listenings
+        });
+
     } catch (error) {
-        res.status(500).json({ message: 'Lỗi khi lấy danh sách', error: error.message });
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy danh sách',
+            error: error.message
+        });
     }
 };
 

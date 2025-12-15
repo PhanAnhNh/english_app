@@ -23,8 +23,6 @@ const getListenings = async (filters) => {
         filter.$or = [
             { title: { $regex: search, $options: 'i' } },      // Tìm trong tiêu đề
             { transcript: { $regex: search, $options: 'i' } }, // Tìm trong nội dung bài nghe
-            // Nếu muốn tìm trong câu hỏi thì bỏ comment dòng dưới:
-            // { 'questions.questionText': { $regex: search, $options: 'i' } } 
         ];
     }
 
