@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const grammarExerciseSchema = new mongoose.Schema({
     grammarId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Grammar', // Liên kết với Collection Grammar (bài học cụ thể như Present Simple)
+        ref: 'grammars', // Liên kết với Collection Grammar (bài học cụ thể như Present Simple)
         required: true
     },
     question: {

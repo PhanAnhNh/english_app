@@ -3,14 +3,26 @@ const GrammarExercise = require('../model/GrammarExercise');
 // Lấy danh sách bài tập (có thể filter theo grammarId)
 exports.getExercises = async (req, res) => {
     try {
-        const { grammarId } = req.query;
+        const { grammarId, grammarCategoryId } = req.query;
         const filter = { isActive: true };
 
+        // Nếu có grammarId, ưu tiên lọc theo bài cụ thể
         if (grammarId) {
             filter.grammarId = grammarId;
         }
+        // Nếu không có grammarId nhưng có categoryId, tìm các bài thuộc category đó
+        else if (grammarCategoryId) {
+            // Cần import model Grammar để tìm các grammar thuộc category này
+            const Grammar = require('../model/Grammar');
+            const grammars = await Grammar.find({ categoryId: grammarCategoryId }).select('_id');
+            const grammarIds = grammars.map(g => g._id);
 
-        const exercises = await GrammarExercise.find(filter);
+            filter.grammarId = { $in: grammarIds };
+        }
+
+        const exercises = await GrammarExercise.find(filter)
+            .populate('grammarId', 'title level') // Populate title và level từ bảng grammar
+            .sort({ createdAt: -1 });
 
         res.status(200).json({
             success: true,
