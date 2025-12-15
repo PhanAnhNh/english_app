@@ -14,7 +14,7 @@ exports.addToDictionary = async (req, res) => {
         const userVocab = await UserVocabulary.findOneAndUpdate(
             { user: userId, vocabulary: vocabularyId }, // Điều kiện tìm
             {
-                status: 'learning', // Mặc định trạng thái là đang học
+                status: 'memorized', // Mặc định trạng thái là đang học
                 learnedAt: new Date()
             }, // Dữ liệu cập nhật/tạo mới
             { new: true, upsert: true } // Option: trả về dữ liệu mới nhất, tạo nếu chưa có
