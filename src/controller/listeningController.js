@@ -11,9 +11,6 @@ exports.createListening = async (req, res) => {
     }
 };
 
-// 2. Lấy danh sách bài nghe (READ ALL)
-// Hỗ trợ lọc theo level và topic: /api/listenings?level=B1&topic=Travel
-// 2. Lấy danh sách bài nghe (READ ALL) - Đã sửa lỗi sắp xếp và phân trang
 exports.getAllListenings = async (req, res) => {
     try {
         // 1. Lấy tất cả tham số từ URL (query string)
