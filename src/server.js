@@ -67,10 +67,21 @@ app.use((req, res) => res.status(404).json({ message: 'API Endpoint không tồn
 
 // Start Server
 // Start Server
+const transporter = require('./config/emailConfig');
+
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server đang chạy tại port ${PORT}`);
     console.log('Environment:', process.env.NODE_ENV);
+
+    // Kiểm tra kết nối SMTP ngay khi server khởi động
+    transporter.verify((error, success) => {
+        if (error) {
+            console.error('❌ SMTP Connection Error:', error);
+        } else {
+            console.log('✅ SMTP Connection Ready! Server is ready to take our messages');
+        }
+    });
 });
 
 // Handle unhandled promise rejections
