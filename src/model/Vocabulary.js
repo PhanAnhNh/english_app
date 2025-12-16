@@ -6,7 +6,11 @@ const VocabularySchema = new mongoose.Schema({
     pronunciation: String,
     type: String, // noun, verb...
     level: String, // A, B, C
-    topic: String,
+    topic: {
+        type: mongoose.Schema.Types.ObjectId, // <-- Đổi thành ObjectId
+        ref: 'Topic',
+        required: true
+    },
     example: String,
     audioUrl: String,
     imageUrl: String,

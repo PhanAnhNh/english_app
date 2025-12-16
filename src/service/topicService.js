@@ -1,4 +1,7 @@
 const Topic = require('../model/Topic');
+const Vocabulary = require('../model/Vocabulary');          // <--- BẠN ĐANG THIẾU DÒNG NÀY
+const UserVocabulary = require('../model/UserVocabulary');
+const mongoose = require('mongoose');
 
 const getTopics = async (filters) => {
     const { page = 1, limit = 100, sortBy = 'createdAt', sortOrder = 'asc', level } = filters;
@@ -48,11 +51,52 @@ const deleteTopic = async (topicId) => {
     return { message: 'Đã xóa thành công' };
 };
 
+const getTopicsWithProgress = async (userId) => {
+    // 1. Lấy tất cả topic
+    const topics = await Topic.find({}).lean();
+    if (!topics.length) return [];
+
+    const topicIds = topics.map(t => t._id);
+
+    const topicsWithData = await Promise.all(topics.map(async (topic) => {
+        const topicId = topic._id;
+
+        // Đếm tổng từ trong Topic này
+        const totalWords = await Vocabulary.countDocuments({ topic: topicId });
+
+        const learnedDocs = await UserVocabulary.find({
+            user: userId,
+            status: 'memorized'
+        }).populate({
+            path: 'vocabulary',
+            match: { topic: topicId } // Chỉ lấy những từ thuộc topic này
+        });
+
+        const learnedWords = learnedDocs.filter(doc => doc.vocabulary).length;
+
+        // Tính %
+        let progress = 0;
+        if (totalWords > 0) {
+            progress = Math.round((learnedWords / totalWords) * 100);
+        }
+
+        return {
+            ...topic,
+            totalWords,
+            learnedWords,
+            progress
+        };
+    }));
+
+    return topicsWithData;
+};
+
 module.exports = {
     getTopics,
     getTopicById,
     createTopic,
     updateTopic,
+    getTopicsWithProgress,
     deleteTopic
 };
 

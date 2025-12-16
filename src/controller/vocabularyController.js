@@ -2,7 +2,9 @@ const vocabularyService = require('../service/vocabularyService');
 
 const getVocabularies = async (req, res) => {
     try {
-        const result = await vocabularyService.getVocabularies(req.query);
+        const userId = req.user ? req.user.id : null;
+
+        const result = await vocabularyService.getVocabularies(req.query, userId);
         res.json(result);
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -11,7 +13,12 @@ const getVocabularies = async (req, res) => {
 
 const getVocabularyById = async (req, res) => {
     try {
-        const item = await vocabularyService.getVocabularyById(req.params.id);
+        // Lấy userId từ token (nếu người dùng đã đăng nhập)
+        const userId = req.user ? req.user.id : null;
+
+        // Truyền userId vào service
+        const item = await vocabularyService.getVocabularyById(req.params.id, userId);
+
         res.json(item);
     } catch (e) {
         res.status(404).json({ message: e.message });

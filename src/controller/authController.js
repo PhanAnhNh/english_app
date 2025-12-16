@@ -61,6 +61,7 @@ const adminLogin = async (req, res) => {
         const deviceInfo = getDeviceInfo(req);
         deviceInfo.deviceType = 'web'; // Force web type for admin
         const result = await authService.adminLogin(username, password, deviceInfo);
+        
         // Set cookies cho web admin (HttpOnly, Secure)
         if (result && result.accessToken) {
             res.cookie('accessToken', result.accessToken, cookieOptions());
@@ -158,6 +159,7 @@ const logout = async (req, res) => {
 const logoutAll = async (req, res) => {
     try {
         await authService.revokeAllUserTokens(req.user.id);
+        
         // Clear cookies
         res.clearCookie('accessToken', {
             httpOnly: true,
