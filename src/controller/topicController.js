@@ -1,15 +1,23 @@
 const topicService = require('../service/topicService');
 
-const getTopics = async (req, res) => {
+const getAllTopics = async (req, res) => {
     try {
-        // Gọi hàm bên topicService
-        const result = await topicService.getTopicsWithProgress(req.user.id);
-        res.json({ success: true, data: result });
+
+        const userId = req.user ? req.user.id : null;
+
+        if (!userId) {
+            return res.status(400).json({ message: "User ID not found via Token" });
+        }
+
+        // GỌI HÀM MỚI BẠN VỪA VIẾT TRONG SERVICE
+        const topics = await topicService.getTopicsWithProgress(userId);
+
+        return res.status(200).json(topics);
     } catch (e) {
-        res.status(500).json({ success: false, message: e.message });
+        console.log(e);
+        return res.status(500).json({ message: e.message });
     }
 };
-
 const getTopicById = async (req, res) => {
     try {
         const item = await topicService.getTopicById(req.params.id);
@@ -47,7 +55,7 @@ const deleteTopic = async (req, res) => {
 };
 
 module.exports = {
-    getTopics,
+    getAllTopics,
     getTopicById,
     createTopic,
     updateTopic,

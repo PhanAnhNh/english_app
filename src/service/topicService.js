@@ -42,50 +42,45 @@ const deleteTopic = async (topicId) => {
     await Topic.findByIdAndDelete(topicId);
     return { message: 'Đã xóa thành công' };
 };
+
 const getTopicsWithProgress = async (userId) => {
-    // 1. Lấy danh sách Topic
+    // 1. Lấy tất cả topic
     const topics = await Topic.find({}).lean();
     if (!topics.length) return [];
 
     const topicIds = topics.map(t => t._id);
 
-    // 2. Đếm tổng từ vựng
-    const vocabCounts = await Vocabulary.aggregate([
-        { $match: { topic: { $in: topicIds } } },
-        { $group: { _id: "$topic", total: { $sum: 1 } } }
-    ]);
-    const totalMap = {};
-    vocabCounts.forEach(i => totalMap[i._id.toString()] = i.total);
+    const topicsWithData = await Promise.all(topics.map(async (topic) => {
+        const topicId = topic._id;
 
-    // 3. Đếm từ đã thuộc
-    const learnedCounts = await UserVocabulary.aggregate([
-        { $match: { user: new mongoose.Types.ObjectId(userId), status: 'memorized' } },
-        {
-            $lookup: {
-                from: 'vocabularies', localField: 'vocabulary', foreignField: '_id', as: 'vocabData'
-            }
-        },
-        { $unwind: '$vocabData' },
-        { $match: { "vocabData.topic": { $in: topicIds } } },
-        { $group: { _id: "$vocabData.topic", learned: { $sum: 1 } } }
-    ]);
-    const learnedMap = {};
-    learnedCounts.forEach(i => learnedMap[i._id.toString()] = i.learned);
+        // Đếm tổng từ trong Topic này
+        const totalWords = await Vocabulary.countDocuments({ topic: topicId });
 
-    // 4. Ghép data
-    return topics.map(topic => {
-        const tid = topic._id.toString();
-        const total = totalMap[tid] || 0;
-        const learned = learnedMap[tid] || 0;
-        const percent = total > 0 ? Math.round((learned / total) * 100) : 0;
+        const learnedDocs = await UserVocabulary.find({
+            user: userId,
+            status: 'memorized'
+        }).populate({
+            path: 'vocabulary',
+            match: { topic: topicId } // Chỉ lấy những từ thuộc topic này
+        });
+
+        const learnedWords = learnedDocs.filter(doc => doc.vocabulary).length;
+
+        // Tính %
+        let progress = 0;
+        if (totalWords > 0) {
+            progress = Math.round((learnedWords / totalWords) * 100);
+        }
 
         return {
             ...topic,
-            progress: percent, // Trả về tiến độ (0-100)
-            learnedWords: learned,
-            totalWords: total
+            totalWords,
+            learnedWords,
+            progress
         };
-    });
+    }));
+
+    return topicsWithData;
 };
 
 module.exports = {
