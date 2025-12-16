@@ -67,5 +67,22 @@ app.use('/api/landing-page', landingPageRoutes);
 app.use((req, res) => res.status(404).json({ message: 'API Endpoint không tồn tại' }));
 
 // Start Server
+// Start Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server đang chạy tại port ${PORT}`));
+const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server đang chạy tại port ${PORT}`);
+    console.log('Environment:', process.env.NODE_ENV);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err, promise) => {
+    console.log(`Error: ${err.message}`);
+    // Close server & exit process
+    // server.close(() => process.exit(1)); // Commented out to prevent crash loop, just log for now
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+    console.error(err.name, err.message);
+    process.exit(1);
+});
