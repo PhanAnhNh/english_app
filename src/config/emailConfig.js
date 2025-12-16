@@ -1,11 +1,14 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+const port = parseInt(process.env.EMAIL_PORT) || 465; // Mặc định dùng 465 (SSL)
+const secure = port === 465; // true nếu 465, false nếu 587
+
 const config = {
     // Render hoặc Cloud Host thường chặn port mặc định, nên cần config thủ công
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT) || 587, // Port 587 thường ổn định hơn trên Cloud
-    secure: process.env.EMAIL_PORT == 465, // true nếu dùng port 465
+    port: port,
+    secure: secure,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
