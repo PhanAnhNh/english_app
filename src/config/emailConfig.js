@@ -4,7 +4,7 @@ const nodemailer = require('nodemailer');
 // Tạo transporter với thông tin SMTP từ biến môi trường
 const config = {
     host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
-    port: Number(process.env.SMTP_PORT) || 587,
+    port: 587, // Cố định cổng 587 theo yêu cầu
     secure: false, // true for 465, false for other ports
     auth: {
         user: process.env.SMTP_USER, // SMTP Login ID
