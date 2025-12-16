@@ -1,10 +1,25 @@
 const transporter = require('../config/emailConfig');
 
+// Đặt giá trị mặc định cho Tên Người Gửi và Email Người Gửi
+// Cần đảm bảo biến môi trường SENDER_NAME và SENDER_EMAIL được cấu hình
+const SENDER_NAME = process.env.SENDER_NAME || 'English App Team';
+const SENDER_EMAIL = process.env.SENDER_EMAIL; // Không đặt giá trị mặc định để buộc phải cấu hình
+
 const sendOtpEmail = async (to, otp) => {
+    // Kiểm tra xem địa chỉ người gửi đã được cấu hình chưa
+    if (!SENDER_EMAIL) {
+        console.error('Lỗi cấu hình: Biến môi trường SENDER_EMAIL bị thiếu.');
+        throw new Error('Cấu hình gửi email chưa hoàn tất.');
+    }
+
     try {
         const mailOptions = {
-            from: process.env.EMAIL_USER,
+            // SỬA Ở ĐÂY: Sử dụng địa chỉ email thực tế cho trường 'from' (đã bao gồm Tên Người Gửi)
+            from: `"${SENDER_NAME}" <${SENDER_EMAIL}>`,
+
+            // Địa chỉ người nhận
             to: to,
+
             subject: 'Mã xác thực quên mật khẩu - English App',
             html: `
                 <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
@@ -25,7 +40,8 @@ const sendOtpEmail = async (to, otp) => {
         return result;
     } catch (error) {
         console.error('Error sending email:', error);
-        throw new Error('Không thể gửi email OTP');
+        // Thay đổi thông báo lỗi để người dùng dễ hiểu hơn
+        throw new Error('Không thể gửi email OTP. Vui lòng kiểm tra log để biết chi tiết lỗi SMTP.');
     }
 };
 

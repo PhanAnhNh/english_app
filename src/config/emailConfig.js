@@ -1,28 +1,22 @@
+require('dotenv').config();
 const nodemailer = require('nodemailer');
 
-require('dotenv').config();
-
+// Tạo transporter với thông tin SMTP từ biến môi trường
 const config = {
-    service: 'gmail',
-
+    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: false, // true for 465, false for other ports
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        user: process.env.SMTP_USER, // SMTP Login ID
+        pass: process.env.SMTP_PASS, // SMTP Key
     },
-
-
-    logger: true,
-    debug: true
 };
 
-console.log('--- Email Config Check (Render) ---');
+console.log('--- SMTP CONFIGURATION ---');
 console.log('Host:', config.host);
 console.log('Port:', config.port);
-console.log('Secure (SSL/TLS):', config.secure);
-console.log('Connection Timeout:', config.connectionTimeout + 'ms');
-console.log('User:', config.auth.user ? config.auth.user : 'Missing');
-console.log('Pass:', config.auth.pass ? 'Set' : 'Missing');
-console.log('-----------------------------------');
+console.log('User:', config.auth.user);
+console.log('--------------------------');
 
 const transporter = nodemailer.createTransport(config);
 
