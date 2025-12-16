@@ -108,7 +108,7 @@ const calculateUserProgress = async (userId) => {
     // 1. Lấy tất cả Topic
     const allTopics = await Topic.find({}).select('_id');
     const totalTopics = allTopics.length;
-    
+
     // Nếu không có topic nào
     if (totalTopics === 0) {
         return {
@@ -131,11 +131,11 @@ const calculateUserProgress = async (userId) => {
     // 3. Đếm TỔNG số từ user đã thuộc (Memorized Vocabulary)
     // Lưu ý: Cần filter theo topic để đảm bảo từ đó thuộc các topic đang xét (tránh tính các từ mồ côi)
     const learnedVocabCountResult = await UserVocabulary.aggregate([
-        { 
-            $match: { 
-                user: new mongoose.Types.ObjectId(userId), 
-                status: 'memorized' 
-            } 
+        {
+            $match: {
+                user: new mongoose.Types.ObjectId(userId),
+                status: 'memorized'
+            }
         },
         {
             $lookup: {
@@ -182,7 +182,7 @@ const calculateUserProgress = async (userId) => {
     }, {});
 
     let completedTopicsCount = 0;
-    const TOPIC_COMPLETION_THRESHOLD = 0.9; 
+    const TOPIC_COMPLETION_THRESHOLD = 0.9;
 
     for (const topicId of allTopicIds) {
         const tid = topicId.toString();
@@ -212,85 +212,10 @@ const calculateUserProgress = async (userId) => {
     };
 };
 
-const getTopicsWithProgress = async (userId) => {
-    // 1. Lấy danh sách tất cả các Topic
-    // Dùng .lean() để trả về object JS thuần, giúp ta dễ dàng gán thêm thuộc tính 'progress'
-    const topics = await Topic.find({}).lean(); 
-    
-    // Nếu không có topic nào thì return luôn
-    if (!topics.length) return [];
-
-    const topicIds = topics.map(t => t._id);
-
-    // 2. Đếm tổng số từ vựng trong từng Topic
-    const vocabCounts = await Vocabulary.aggregate([
-        { $match: { topic: { $in: topicIds } } },
-        { $group: { _id: "$topic", total: { $sum: 1 } } }
-    ]);
-    
-    // Chuyển về dạng Map cho dễ tra cứu: { "topicId": 20 }
-    const totalMap = {};
-    vocabCounts.forEach(item => {
-        totalMap[item._id.toString()] = item.total;
-    });
-
-    // 3. Đếm số từ user đã thuộc (memorized) trong từng Topic
-    const learnedCounts = await UserVocabulary.aggregate([
-        { 
-            $match: { 
-                user: new mongoose.Types.ObjectId(userId), 
-                status: 'memorized' // Chỉ tính từ đã thuộc
-            } 
-        },
-        {
-            $lookup: {
-                from: 'vocabularies',
-                localField: 'vocabulary',
-                foreignField: '_id',
-                as: 'vocabData'
-            }
-        },
-        { $unwind: '$vocabData' },
-        { $match: { "vocabData.topic": { $in: topicIds } } },
-        { $group: { _id: "$vocabData.topic", learned: { $sum: 1 } } }
-    ]);
-
-    // Chuyển về Map: { "topicId": 5 }
-    const learnedMap = {};
-    learnedCounts.forEach(item => {
-        learnedMap[item._id.toString()] = item.learned;
-    });
-
-    // 4. Ghép dữ liệu lại: Topic + % tiến độ
-    const result = topics.map(topic => {
-        const tid = topic._id.toString();
-        const totalWords = totalMap[tid] || 0;
-        const learnedWords = learnedMap[tid] || 0;
-
-        // Tính phần trăm
-        let percent = 0;
-        if (totalWords > 0) {
-            percent = Math.round((learnedWords / totalWords) * 100);
-        }
-
-        return {
-            ...topic,           // Giữ nguyên các trường cũ (name, image, level...)
-            totalWords,         // Trả thêm tổng số từ (để hiển thị VD: 5/20)
-            learnedWords,       // Trả thêm số từ đã học
-            progress: percent   // Đây là cái bạn cần: 0 -> 100
-        };
-    });
-
-    return result;
-};
-
 module.exports = {
     getTopicsWithProgress
 };
 
-/**
- * Chuyển Level (A -> B, B -> C)
- */
 const levelUpUser = async (userId, currentLevel) => {
     const userIndex = ORDERED_LEVELS.indexOf(currentLevel);
 
