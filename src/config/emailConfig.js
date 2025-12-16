@@ -13,12 +13,11 @@ const config = {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
-    // Tăng thời gian chờ và log debug
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-    logger: true, // Log to console
-    debug: true   // Include SMTP traffic in logs
+    // Force IPv4 is helps avoid timeouts on some cloud providers
+    tls: {
+        ciphers: 'SSLv3'
+    },
+    family: 4 // Force IPv4
 };
 
 console.log('--- Email Config Check ---');
