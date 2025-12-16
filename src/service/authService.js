@@ -3,10 +3,11 @@ const crypto = require('crypto');
 const User = require('../model/User');
 const RefreshToken = require('../model/RefreshToken');
 const { createAccessToken, createRefreshToken } = require('../utils/jwt');
+const emailService = require('./emailService');
 
 const register = async (userData) => {
     const { fullname, username, password, role = 'student', email } = userData;
-    
+
     if (!username || !password) {
         throw new Error('Thiếu username hoặc password');
     }
@@ -249,6 +250,70 @@ const getMe = async (userId) => {
     return user;
 };
 
+const forgotPassword = async (username) => {
+    const user = await User.findOne({ username });
+    if (!user) {
+        throw new Error('Username không tồn tại trong hệ thống');
+    }
+    if (!user.email) {
+        throw new Error('Tài khoản này chưa đăng ký email, vui lòng liên hệ admin');
+    }
+
+    const email = user.email;
+
+    // Tạo OTP 6 số
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Lưu OTP và thời gian hết hạn (10 phút)
+    user.resetPasswordOtp = otp;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    // Gửi email
+    await emailService.sendOtpEmail(email, otp);
+
+    return { message: 'Mã OTP đã được gửi đến email của bạn' };
+};
+
+const verifyOtp = async (username, otp) => {
+    const user = await User.findOne({
+        username,
+        resetPasswordOtp: otp,
+        resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+        throw new Error('Mã OTP không hợp lệ hoặc đã hết hạn');
+    }
+
+    return { message: 'Xác thực OTP thành công' };
+};
+
+const resetPassword = async (username, otp, newPassword) => {
+    // Verify lại một lần nữa để chắc chắn
+    const user = await User.findOne({
+        username,
+        resetPasswordOtp: otp,
+        resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+        throw new Error('Mã OTP không hợp lệ hoặc đã hết hạn');
+    }
+
+    // Hash password mới
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(newPassword, salt);
+
+    // Cập nhật password và xóa OTP
+    user.passwordHash = hash;
+    user.resetPasswordOtp = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return { message: 'Đặt lại mật khẩu thành công' };
+};
+
 module.exports = {
     register,
     login,
@@ -256,5 +321,8 @@ module.exports = {
     refreshAccessToken,
     revokeRefreshToken,
     revokeAllUserTokens,
-    getMe
+    getMe,
+    forgotPassword,
+    verifyOtp,
+    resetPassword
 };

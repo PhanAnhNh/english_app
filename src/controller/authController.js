@@ -176,6 +176,39 @@ const logoutAll = async (req, res) => {
     }
 };
 
+// Forgot Password
+const forgotPassword = async (req, res) => {
+    try {
+        const { username } = req.body;
+        const result = await authService.forgotPassword(username);
+        res.json(result);
+    } catch (e) {
+        res.status(400).json({ message: e.message });
+    }
+};
+
+// Verify OTP
+const verifyOtp = async (req, res) => {
+    try {
+        const { username, otp } = req.body;
+        const result = await authService.verifyOtp(username, otp);
+        res.json(result);
+    } catch (e) {
+        res.status(400).json({ message: e.message });
+    }
+};
+
+// Reset Password
+const resetPassword = async (req, res) => {
+    try {
+        const { username, otp, newPassword } = req.body;
+        const result = await authService.resetPassword(username, otp, newPassword);
+        res.json(result);
+    } catch (e) {
+        res.status(400).json({ message: e.message });
+    }
+};
+
 module.exports = {
     register,
     login,
@@ -183,5 +216,8 @@ module.exports = {
     refreshToken,
     getMe,
     logout,
-    logoutAll
+    logoutAll,
+    forgotPassword,
+    verifyOtp,
+    resetPassword
 };

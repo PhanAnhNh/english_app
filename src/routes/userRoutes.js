@@ -20,4 +20,3 @@ router.put('/change-password', authMiddleware, userController.changePassword);
 router.get('/profile', authMiddleware, userController.getProfile);
 
 module.exports = router;
-
