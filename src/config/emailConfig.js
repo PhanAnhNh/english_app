@@ -1,15 +1,28 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+const port = parseInt(process.env.EMAIL_PORT) || 465; // Default 465
+const isSSL = port === 465; // 465 uses implicit SSL
+const isSTARTTLS = port === 587; // 587 uses STARTTLS
+
 const config = {
-    service: 'gmail', // Use 'gmail' service shorthand which handles host/port automatically (usually 465 or 587)
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: port,
+    secure: isSSL, // true for 465, false for other ports
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
-    // Force IPv4 to avoid IPv6 timeouts
+    // TLS options
+    tls: {
+        // Do not fail on invalid certs
+        rejectUnauthorized: false,
+        // Force TLS if using STARTTLS port
+        ciphers: isSSL ? 'SSLv3' : undefined
+    },
+    // Force IPv4 to avoid timeouts
     family: 4,
-    // Log for debugging
+    // Logging
     logger: true,
     debug: true
 };
