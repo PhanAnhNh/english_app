@@ -2,12 +2,15 @@ const topicService = require('../service/topicService');
 
 const getTopics = async (req, res) => {
     try {
-        const result = await topicService.getTopics(req.query);
-        res.json(result);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
+        // req.user.id lấy từ token sau khi đăng nhập
+        const data = await topicService.getTopicsWithProgress(req.user.id);
+        res.json({ success: true, data: data });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };
+
+module.exports = { getTopics };
 
 const getTopicById = async (req, res) => {
     try {
