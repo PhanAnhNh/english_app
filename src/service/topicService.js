@@ -1,4 +1,7 @@
 const Topic = require('../model/Topic');
+const Vocabulary = require('../model/Vocabulary');          // <--- BẠN ĐANG THIẾU DÒNG NÀY
+const UserVocabulary = require('../model/UserVocabulary');
+const mongoose = require('mongoose');
 
 const getTopics = async (filters) => {
     const { page = 1, limit = 100, sortBy = 'createdAt', sortOrder = 'asc', level } = filters;
