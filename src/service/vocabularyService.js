@@ -1,41 +1,94 @@
 const Vocabulary = require('../model/Vocabulary');
 const AdminLog = require('../model/AdminLog');
 const UserVocabulary = require('../model/UserVocabulary');
+const mongoose = require('mongoose'); // <-- THÊM DÒNG NÀY!
 
-// vocabularyService.js - sửa hàm getVocabularies
 const getVocabularies = async (filters) => {
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', level, topic, search } = filters;
+    try {
+        const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', level, topic, search } = filters;
 
-    console.log("📝 GET vocabularies - Query filters:", filters);
+        console.log("🚀 ========== GET VOCABULARIES CALLED ==========");
+        console.log("📦 Query params:", { topic, level, search });
 
-    // Tạo bộ lọc
-    let filter = {};
+        // Tạo bộ lọc
+        let filter = {};
 
-    if (level) filter.level = level;
-
-    if (topic) {
-        // Xử lý cả trường hợp topic là String hoặc ObjectId
-        if (mongoose.Types.ObjectId.isValid(topic)) {
-            filter.topic = new mongoose.Types.ObjectId(topic);
-        } else {
-            filter.topic = topic;
+        // Xử lý level
+        if (level) {
+            filter.level = level;
+            console.log("🎯 Filter by level:", level);
         }
+
+        // Xử lý topic - QUAN TRỌNG
+        if (topic) {
+            console.log("🎯 Topic received:", topic);
+            console.log("🔧 Type of topic:", typeof topic);
+
+            // KIỂM TRA MONGODB CONNECTION
+            console.log("🔌 Mongoose connection state:", mongoose.connection.readyState);
+
+            // THỬ CÁCH XỬ LÝ LINH HOẠT
+            try {
+                if (mongoose.Types.ObjectId.isValid(topic)) {
+                    console.log("✅ Topic is valid ObjectId");
+                    filter.topic = new mongoose.Types.ObjectId(topic);
+                } else {
+                    console.log("⚠️ Topic is not valid ObjectId, using as string");
+                    filter.topic = topic;
+                }
+            } catch (mongooseError) {
+                console.error("❌ Mongoose error:", mongooseError);
+                // Fallback: dùng string
+                filter.topic = topic;
+            }
+        }
+
+        if (search) {
+            filter.word = { $regex: search, $options: 'i' };
+            console.log("🔍 Search filter:", search);
+        }
+
+        console.log("🎯 Final filter for query:", JSON.stringify(filter, null, 2));
+
+        // THỰC HIỆN QUERY
+        const data = await Vocabulary.find(filter);
+        console.log("✅ Query executed successfully");
+        console.log("📊 Number of vocabularies found:", data.length);
+
+        // LOG MỘT SỐ KẾT QUẢ
+        if (data.length > 0) {
+            data.slice(0, 3).forEach((item, index) => {
+                console.log(`📖 Item ${index + 1}:`, {
+                    word: item.word,
+                    topic: item.topic,
+                    level: item.level,
+                    topicType: typeof item.topic
+                });
+            });
+        } else {
+            console.log("📭 No vocabularies found with current filter");
+
+            // DEBUG: Tìm tất cả để xem có gì trong DB
+            const allVocab = await Vocabulary.find({}).limit(5);
+            console.log("🔍 First 5 vocabularies in DB:");
+            allVocab.forEach(item => {
+                console.log(`  - ${item.word} (topic: ${item.topic}, level: ${item.level})`);
+            });
+        }
+
+        return {
+            total: data.length,
+            page: parseInt(page),
+            limit: parseInt(limit) || data.length,
+            totalPages: Math.ceil(data.length / (parseInt(limit) || 1)),
+            data
+        };
+
+    } catch (error) {
+        console.error("💥 ERROR in getVocabularies:", error);
+        console.error("💥 Error stack:", error.stack);
+        throw new Error(`Failed to get vocabularies: ${error.message}`);
     }
-
-    if (search) filter.word = { $regex: search, $options: 'i' };
-
-    console.log("🔍 MongoDB filter:", JSON.stringify(filter));
-
-    const data = await Vocabulary.find(filter);
-    console.log("✅ Found vocabularies:", data.length);
-
-    return {
-        total: data.length,
-        page: parseInt(page),
-        limit: parseInt(limit) || data.length,
-        totalPages: Math.ceil(data.length / (parseInt(limit) || 1)),
-        data
-    };
 };
 
 const getVocabularyById = async (vocabId, userId) => {
