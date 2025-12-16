@@ -212,10 +212,6 @@ const calculateUserProgress = async (userId) => {
     };
 };
 
-module.exports = {
-    getTopicsWithProgress
-};
-
 const levelUpUser = async (userId, currentLevel) => {
     const userIndex = ORDERED_LEVELS.indexOf(currentLevel);
 
