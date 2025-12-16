@@ -179,8 +179,10 @@ const calculateUserProgress = async (userId) => {
         return {
             overallLevel: currentLevel,
             overallLevelPercentage: parseFloat(overallLevelPercentage.toFixed(2)),
-            topicProgressBarPercentage: 100, // Không có topic nào coi như xong
-            canLevelUp: true
+            topicProgressBarPercentage: 0, // Không có topic nào coi như xong
+            canLevelUp: false,
+
+            message: "Không tìm thấy Topic nào cho Level này"
         };
     }
 
