@@ -1,4 +1,5 @@
 const Vocabulary = require('../model/Vocabulary');
+const Topic = require('../model/Topic');
 const AdminLog = require('../model/AdminLog');
 const UserVocabulary = require('../model/UserVocabulary');
 const mongoose = require('mongoose'); // <-- THÊM DÒNG NÀY!
@@ -28,18 +29,13 @@ const getVocabularies = async (filters) => {
             console.log("🔌 Mongoose connection state:", mongoose.connection.readyState);
 
             // THỬ CÁCH XỬ LÝ LINH HOẠT
-            try {
-                if (mongoose.Types.ObjectId.isValid(topic)) {
-                    console.log("✅ Topic is valid ObjectId");
-                    filter.topic = new mongoose.Types.ObjectId(topic);
-                } else {
-                    console.log("⚠️ Topic is not valid ObjectId, using as string");
-                    filter.topic = topic;
-                }
-            } catch (mongooseError) {
-                console.error("❌ Mongoose error:", mongooseError);
-                // Fallback: dùng string
-                filter.topic = topic;
+            if (mongoose.Types.ObjectId.isValid(topic)) {
+                filter.topic = new mongoose.Types.ObjectId(topic);
+            } else {
+                // Nếu topic không phải ObjectId hợp lệ, có thể user đang gửi name? 
+                // Nhưng schema là ObjectId, nên query string sẽ fail cast hoặc không ra kết quả.
+                // Để an toàn và đồng bộ ID, ta chỉ query khi đúng format.
+                console.warn("⚠️ Received invalid ObjectId for topic filter:", topic);
             }
         }
 
@@ -51,7 +47,7 @@ const getVocabularies = async (filters) => {
         console.log("🎯 Final filter for query:", JSON.stringify(filter, null, 2));
 
         // THỰC HIỆN QUERY
-        const data = await Vocabulary.find(filter);
+        const data = await Vocabulary.find(filter).populate('topic', 'name');
         console.log("✅ Query executed successfully");
         console.log("📊 Number of vocabularies found:", data.length);
 

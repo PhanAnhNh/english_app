@@ -1,5 +1,6 @@
 const Topic = require('../model/Topic');
-const Vocabulary = require('../model/Vocabulary');          // <--- BẠN ĐANG THIẾU DÒNG NÀY
+const Vocabulary = require('../model/Vocabulary');
+const Exercise = require('../model/Exercise');
 const UserVocabulary = require('../model/UserVocabulary');
 const mongoose = require('mongoose');
 
@@ -46,9 +47,12 @@ const deleteTopic = async (topicId) => {
 
     // Xóa image trên Cloudinary
 
+    // XÓA LIÊN KẾT (CASCADING DELETE) 
+    await Vocabulary.deleteMany({ topic: topicId });
+    await Exercise.deleteMany({ topicId: topicId });
 
     await Topic.findByIdAndDelete(topicId);
-    return { message: 'Đã xóa thành công' };
+    return { message: 'Đã xóa chủ đề và toàn bộ dữ liệu liên quan thành công' };
 };
 
 const getTopicsWithProgress = async (userId) => {

@@ -1,4 +1,5 @@
 const Exercise = require('../model/Exercise');
+const Topic = require('../model/Topic');
 
 const getExercises = async (filters) => {
     const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, topicId, search } = filters;
