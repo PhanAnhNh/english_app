@@ -13,7 +13,6 @@ const config = {
         pass: process.env.EMAIL_PASS
     },
 
-    // 💡 Fix lỗi Timeout trên Render (QUAN TRỌNG NHẤT)
     family: 4,
 
     logger: true,

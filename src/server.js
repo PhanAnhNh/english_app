@@ -4,6 +4,43 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/database');
+const net = require('net');
+
+// --- DIAGNOSTIC: Check SMTP Connectivity ---
+const checkConnection = (host, port) => {
+    return new Promise((resolve) => {
+        console.log(`🔍 Checking connectivity to ${host}:${port}...`);
+        const socket = new net.Socket();
+        socket.setTimeout(5000); // 5s timeout
+
+        socket.on('connect', () => {
+            console.log(`✅ SUCCESS: Connected to ${host}:${port}`);
+            socket.destroy();
+            resolve(true);
+        });
+
+        socket.on('timeout', () => {
+            console.log(`❌ TIMEOUT: Could not connect to ${host}:${port} (Likely Blocked)`);
+            socket.destroy();
+            resolve(false);
+        });
+
+        socket.on('error', (err) => {
+            console.log(`❌ ERROR: Failed to connect to ${host}:${port} - ${err.message}`);
+            socket.destroy();
+            resolve(false);
+        });
+
+        socket.connect(port, host);
+    });
+};
+
+// Check both Gmail ports on startup
+(async () => {
+    await checkConnection('smtp.gmail.com', 465);
+    await checkConnection('smtp.gmail.com', 587);
+})();
+// -------------------------------------------
 
 const app = express();
 app.use(express.json());
