@@ -2,31 +2,38 @@ const Vocabulary = require('../model/Vocabulary');
 const AdminLog = require('../model/AdminLog');
 const UserVocabulary = require('../model/UserVocabulary');
 
+// vocabularyService.js - sửa hàm getVocabularies
 const getVocabularies = async (filters) => {
     const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', level, topic, search } = filters;
 
+    console.log("📝 GET vocabularies - Query filters:", filters);
+
     // Tạo bộ lọc
     let filter = {};
+
     if (level) filter.level = level;
-    if (topic) filter.topic = topic;
+
+    if (topic) {
+        // Xử lý cả trường hợp topic là String hoặc ObjectId
+        if (mongoose.Types.ObjectId.isValid(topic)) {
+            filter.topic = new mongoose.Types.ObjectId(topic);
+        } else {
+            filter.topic = topic;
+        }
+    }
+
     if (search) filter.word = { $regex: search, $options: 'i' };
 
-    // Tính toán phân trang
-    const skip = (page - 1) * limit;
-    const total = await Vocabulary.countDocuments(filter);
+    console.log("🔍 MongoDB filter:", JSON.stringify(filter));
 
-    // Query dữ liệu
-    const sortOrderNum = sortOrder === 'asc' ? 1 : -1;
-    const data = await Vocabulary.find(filter)
-        .sort({ [sortBy]: sortOrderNum })
-        .skip(skip)
-        .limit(limit);
+    const data = await Vocabulary.find(filter);
+    console.log("✅ Found vocabularies:", data.length);
 
     return {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        total: data.length,
+        page: parseInt(page),
+        limit: parseInt(limit) || data.length,
+        totalPages: Math.ceil(data.length / (parseInt(limit) || 1)),
         data
     };
 };

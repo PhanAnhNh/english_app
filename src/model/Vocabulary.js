@@ -8,7 +8,8 @@ const VocabularySchema = new mongoose.Schema({
     level: String, // A, B, C
     topic: {
         type: mongoose.Schema.Types.ObjectId, // <-- Đổi thành ObjectId
-        ref: 'Topic'
+        ref: 'Topic',
+        required: true
     },
     example: String,
     audioUrl: String,
