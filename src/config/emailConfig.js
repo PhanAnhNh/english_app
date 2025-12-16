@@ -1,11 +1,8 @@
 const nodemailer = require('nodemailer');
-// Sử dụng dotenv để đọc biến môi trường từ .env nếu chạy local
-// Nếu chạy trên Render, các biến này sẽ được đọc từ Environment Variables
+
 require('dotenv').config();
 
 const config = {
-    // 💡 Đơn giản nhất và chuẩn nhất: dùng 'gmail' service
-    // Nó tự động chọn Port 465/587 và cấu hình TLS phù hợp
     service: 'gmail',
 
     auth: {
@@ -13,7 +10,6 @@ const config = {
         pass: process.env.EMAIL_PASS
     },
 
-    family: 4,
 
     logger: true,
     debug: true

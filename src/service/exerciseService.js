@@ -1,13 +1,13 @@
 const Exercise = require('../model/Exercise');
 
 const getExercises = async (filters) => {
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, topicRef, search } = filters;
+    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, topicId, search } = filters;
 
     let filter = {};
     if (skill) filter.skill = skill;
     if (level) filter.level = level;
     if (type) filter.type = type;
-    if (topic || topicRef) filter.topicRef = topic || topicRef;
+    if (topic || topicId) filter.topicId = topic || topicId;
 
     if (search) {
         filter.$or = [
@@ -19,7 +19,7 @@ const getExercises = async (filters) => {
 
     const skip = (page - 1) * limit;
     const total = await Exercise.countDocuments(filter);
-    const data = await Exercise.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 });
+    const data = await Exercise.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate('topicId', 'name');
 
     return { total, page, limit, totalPages: Math.ceil(total / limit), data };
 };
