@@ -6,7 +6,7 @@ const { createAccessToken, createRefreshToken } = require('../utils/jwt');
 
 const register = async (userData) => {
     const { fullname, username, password, role = 'student', email } = userData;
-    
+
     if (!username || !password) {
         throw new Error('Thiếu username hoặc password');
     }

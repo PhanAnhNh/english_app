@@ -15,9 +15,7 @@ exports.addToDictionary = async (req, res) => {
         let userVocab = await UserVocabulary.findOne({ user: userId, vocabulary: vocabularyId });
 
         if (userVocab) {
-            // Nếu đã có rồi, chỉ update lại thời gian hoặc đánh dấu yêu thích (tùy chọn)
-            // Nếu bạn muốn reset về learning thì giữ nguyên code cũ.
-            // Nếu muốn giữ nguyên trạng thái (ví dụ đang memorized thì kệ nó), dùng code này:
+
             userVocab.learnedAt = new Date();
             // userVocab.status = 'learning'; // <--- Bỏ dòng này nếu không muốn user bị reset việc học
             await userVocab.save();

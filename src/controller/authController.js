@@ -24,9 +24,9 @@ const register = async (req, res) => {
         const deviceInfo = getDeviceInfo(req);
         const result = await authService.register({ ...req.body, deviceInfo });
         // Không set cookie, chỉ trả về tokens trong response body cho Flutter app
-        res.json({ 
-            message: result.message, 
-            user: result.user, 
+        res.json({
+            message: result.message,
+            user: result.user,
             accessToken: result.accessToken,
             refreshToken: result.refreshToken
         });
@@ -42,9 +42,9 @@ const login = async (req, res) => {
         const deviceInfo = getDeviceInfo(req);
         const result = await authService.login(username, password, deviceInfo);
         // Không set cookie, chỉ trả về tokens trong response body cho Flutter app
-        res.json({ 
-            message: result.message, 
-            user: result.user, 
+        res.json({
+            message: result.message,
+            user: result.user,
             accessToken: result.accessToken,
             refreshToken: result.refreshToken
         });
@@ -60,7 +60,7 @@ const adminLogin = async (req, res) => {
         const deviceInfo = getDeviceInfo(req);
         deviceInfo.deviceType = 'web'; // Force web type for admin
         const result = await authService.adminLogin(username, password, deviceInfo);
-        
+
         // Set cookies cho web admin (HttpOnly, Secure)
         if (result && result.accessToken) {
             res.cookie('accessToken', result.accessToken, cookieOptions());
@@ -68,10 +68,10 @@ const adminLogin = async (req, res) => {
         if (result && result.refreshToken) {
             res.cookie('refreshToken', result.refreshToken, cookieOptions());
         }
-        
+
         // Không trả về tokens trong body để bảo mật
-        res.json({ 
-            message: result.message, 
+        res.json({
+            message: result.message,
             user: result.user
             // Không trả về tokens để tránh lộ token trong response
         });
@@ -158,7 +158,7 @@ const logout = async (req, res) => {
 const logoutAll = async (req, res) => {
     try {
         await authService.revokeAllUserTokens(req.user.id);
-        
+
         // Clear cookies
         res.clearCookie('accessToken', {
             httpOnly: true,

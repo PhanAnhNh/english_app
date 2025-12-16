@@ -44,6 +44,7 @@ const userVocabularyRoutes = require('./routes/userVocabularyRoutes');
 const grammarExerciseRoutes = require('./routes/grammarExerciseRoutes');
 const listeningRoutes = require('./routes/listeningRouter');
 
+
 // Sử dụng routes
 app.use('/api', authRoutes);
 app.use('/api', userRoutes);
