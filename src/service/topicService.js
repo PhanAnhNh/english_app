@@ -6,18 +6,20 @@ const mongoose = require('mongoose');
 
 const getTopics = async (filters) => {
     const { page = 1, limit = 100, sortBy = 'createdAt', sortOrder = 'asc', level } = filters;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
     let filter = level ? { level } : {};
 
-    const skip = (page - 1) * limit;
+    const skip = (pageNum - 1) * limitNum;
     const sortOrderNum = sortOrder === 'asc' ? 1 : -1;
 
     const total = await Topic.countDocuments(filter);
     const data = await Topic.find(filter)
         .sort({ [sortBy]: sortOrderNum })
         .skip(skip)
-        .limit(limit);
+        .limit(limitNum);
 
-    return { total, page, limit, totalPages: Math.ceil(total / limit), data };
+    return { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum), data };
 };
 
 const getTopicById = async (topicId) => {

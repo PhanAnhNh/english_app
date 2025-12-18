@@ -7,9 +7,12 @@ const mongoose = require('mongoose');
 const getVocabularies = async (filters) => {
     try {
         const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', level, topic, search } = filters;
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit) || 10;
+        const skip = (pageNum - 1) * limitNum;
 
         console.log("🚀 ========== GET VOCABULARIES CALLED ==========");
-        console.log("📦 Query params:", { topic, level, search });
+        console.log("📦 Query params:", { topic, level, search, page: pageNum, limit: limitNum });
 
         // Tạo bộ lọc
         let filter = {};
@@ -52,8 +55,16 @@ const getVocabularies = async (filters) => {
 
         console.log("🎯 Final filter for query:", JSON.stringify(filter, null, 2));
 
-        // THỰC HIỆN QUERY
-        const data = await Vocabulary.find(filter).populate('topic', 'name');
+        // Get Total Count first
+        const total = await Vocabulary.countDocuments(filter);
+
+        // THỰC HIỆN QUERY with Pagination
+        const data = await Vocabulary.find(filter)
+            .populate('topic', 'name')
+            .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 }) // Sort
+            .skip(skip)
+            .limit(limitNum);
+
         console.log("✅ Query executed successfully");
         console.log("📊 Number of vocabularies found:", data.length);
 
@@ -79,10 +90,10 @@ const getVocabularies = async (filters) => {
         }
 
         return {
-            total: data.length,
-            page: parseInt(page),
-            limit: parseInt(limit) || data.length,
-            totalPages: Math.ceil(data.length / (parseInt(limit) || 1)),
+            total: total,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum),
             data
         };
 
