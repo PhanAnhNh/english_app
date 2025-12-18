@@ -69,7 +69,7 @@ const register = async (userData) => {
     };
 };
 
-const login = async (username, password, deviceInfo = {}, logoutOthers = false) => {
+const login = async (username, password, deviceInfo = {}, logoutOthers = true) => {
     const user = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
@@ -125,7 +125,7 @@ const login = async (username, password, deviceInfo = {}, logoutOthers = false) 
     };
 };
 
-const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = false) => {
+const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = true) => {
     const user = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
