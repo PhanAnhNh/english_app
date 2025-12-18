@@ -9,5 +9,5 @@ const TopicSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('topics', TopicSchema);
+module.exports = mongoose.model('Topic', TopicSchema);
 

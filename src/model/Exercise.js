@@ -9,7 +9,7 @@ const ExerciseSchema = new mongoose.Schema({
     correctAnswer: String,
     explanation: String,
     level: String,
-    topicRef: String,
+    topicId: { type: mongoose.Schema.Types.ObjectId, ref: 'Topic' },
     createdAt: { type: Date, default: Date.now }
 });
 

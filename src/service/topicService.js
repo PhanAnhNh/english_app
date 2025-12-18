@@ -1,6 +1,7 @@
 const Topic = require('../model/Topic');
 const Vocabulary = require('../model/Vocabulary');          // <--- BẠN ĐANG THIẾU DÒNG NÀY
 const UserVocabulary = require('../model/UserVocabulary');
+const Exercise = require('../model/Exercise');
 const mongoose = require('mongoose');
 
 const getTopics = async (filters) => {
@@ -39,8 +40,11 @@ const updateTopic = async (topicId, topicData) => {
 };
 
 const deleteTopic = async (topicId) => {
+    await Vocabulary.deleteMany({ topic: topicId });
+    await Exercise.deleteMany({ topicId: topicId });
+
     await Topic.findByIdAndDelete(topicId);
-    return { message: 'Đã xóa thành công' };
+    return { message: 'Đã xóa chủ đề và toàn bộ dữ liệu liên quan thành công' };
 };
 
 const getTopicsWithProgress = async (userId) => {
