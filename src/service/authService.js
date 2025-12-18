@@ -82,6 +82,9 @@ const login = async (username, password, deviceInfo = {}, logoutOthers = true) =
             { userId: user._id, isRevoked: false },
             { isRevoked: true }
         );
+        // Tăng token version để đá máy cũ (Instant Logout)
+        user.tokenVersion = (user.tokenVersion || 0) + 1;
+        await user.save();
     }
 
     // Tạo tokens
@@ -89,7 +92,8 @@ const login = async (username, password, deviceInfo = {}, logoutOthers = true) =
         id: user._id,
         username: user.username,
         fullname: user.fullname,
-        role: user.role
+        role: user.role,
+        tokenVersion: user.tokenVersion // Gắn version vào token
     });
 
     const refreshToken = createRefreshToken({
@@ -132,17 +136,15 @@ const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = tr
         throw new Error('Sai username hoặc password');
     }
 
-    // Chỉ cho phép admin
-    if (user.role !== 'admin') {
-        throw new Error('Chỉ Admin được phép đăng nhập vào web admin');
-    }
-
     // Nếu yêu cầu đăng xuất các thiết bị khác
     if (logoutOthers) {
         await RefreshToken.updateMany(
             { userId: user._id, isRevoked: false },
             { isRevoked: true }
         );
+        // Tăng token version để đá máy cũ (Instant Logout)
+        user.tokenVersion = (user.tokenVersion || 0) + 1;
+        await user.save();
     }
 
     // Tạo tokens
@@ -150,7 +152,8 @@ const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = tr
         id: user._id,
         username: user.username,
         fullname: user.fullname,
-        role: user.role
+        role: user.role,
+        tokenVersion: user.tokenVersion // Gắn version vào token
     });
 
     const refreshToken = createRefreshToken({
@@ -224,7 +227,8 @@ const refreshAccessToken = async (refreshTokenString) => {
         id: user._id,
         username: user.username,
         fullname: user.fullname,
-        role: user.role
+        role: user.role,
+        tokenVersion: user.tokenVersion // Cập nhật version mới nhất
     });
 
     return {
