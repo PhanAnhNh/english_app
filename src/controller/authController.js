@@ -41,7 +41,10 @@ const login = async (req, res) => {
     try {
         const { username, password, logoutOthers } = req.body;
         const deviceInfo = getDeviceInfo(req);
-        const result = await authService.login(username, password, deviceInfo, logoutOthers === true || logoutOthers === 'true');
+
+        // Chỉ truyền nếu có giá trị, nếu không để service tự default là true
+        const logoutOthersFlag = logoutOthers !== undefined ? (logoutOthers === true || logoutOthers === 'true') : undefined;
+        const result = await authService.login(username, password, deviceInfo, logoutOthersFlag);
         // Không set cookie, chỉ trả về tokens trong response body cho Flutter app
         res.json({
             message: result.message,
@@ -60,7 +63,10 @@ const adminLogin = async (req, res) => {
         const { username, password, logoutOthers } = req.body;
         const deviceInfo = getDeviceInfo(req);
         deviceInfo.deviceType = 'web'; // Force web type for admin
-        const result = await authService.adminLogin(username, password, deviceInfo, logoutOthers === true || logoutOthers === 'true');
+
+        // Chỉ truyền nếu có giá trị, nếu không để service tự default là true
+        const logoutOthersFlag = logoutOthers !== undefined ? (logoutOthers === true || logoutOthers === 'true') : undefined;
+        const result = await authService.adminLogin(username, password, deviceInfo, logoutOthersFlag);
 
         // Set cookies cho web admin (HttpOnly, Secure)
         if (result && result.accessToken) {

@@ -62,7 +62,8 @@ const register = async (userData) => {
             username: user.username,
             fullname: user.fullname,
             role: user.role,
-            email: user.email
+            email: user.email,
+            tokenVersion: user.tokenVersion
         },
         accessToken,
         refreshToken
@@ -122,7 +123,8 @@ const login = async (username, password, deviceInfo = {}, logoutOthers = true) =
             id: user._id,
             username: user.username,
             fullname: user.fullname,
-            role: user.role
+            role: user.role,
+            tokenVersion: user.tokenVersion
         },
         accessToken,
         refreshToken
@@ -182,7 +184,8 @@ const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = tr
             id: user._id,
             username: user.username,
             fullname: user.fullname,
-            role: user.role
+            role: user.role,
+            tokenVersion: user.tokenVersion
         },
         accessToken,
         refreshToken
@@ -237,7 +240,8 @@ const refreshAccessToken = async (refreshTokenString) => {
             id: user._id,
             username: user.username,
             fullname: user.fullname,
-            role: user.role
+            role: user.role,
+            tokenVersion: user.tokenVersion
         }
     };
 };
