@@ -9,7 +9,8 @@ exports.getExercises = async (req, res) => {
             filter.grammarId = grammarId;
         }
 
-        const exercises = await GrammarExercise.find(filter);
+        const exercises = await GrammarExercise.find(filter)
+            .populate('grammarId', 'title level');
 
         res.status(200).json({
             success: true,
@@ -30,7 +31,7 @@ exports.getExercisesByGrammarId = async (req, res) => {
         const exercises = await GrammarExercise.find({
             grammarId: grammarId,
             isActive: true
-        });
+        }).populate('grammarId', 'title level');
 
         if (!exercises) {
             return res.status(404).json({ message: "Không tìm thấy bài tập nào." });
