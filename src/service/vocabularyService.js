@@ -2,8 +2,7 @@ const Vocabulary = require('../model/Vocabulary');
 const Topic = require('../model/Topic');
 const AdminLog = require('../model/AdminLog');
 const UserVocabulary = require('../model/UserVocabulary');
-const Topic = require('../model/Topic');
-const mongoose = require('mongoose'); // <-- THÊM DÒNG NÀY!
+const mongoose = require('mongoose');
 
 const getVocabularies = async (filters) => {
     try {
