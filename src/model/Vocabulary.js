@@ -19,5 +19,5 @@ const VocabularySchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('vocabularies', VocabularySchema);
+module.exports = mongoose.model('Vocabulary', VocabularySchema);
 

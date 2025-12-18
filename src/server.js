@@ -24,6 +24,8 @@ app.use(cors({
 
 // Kết nối database
 connectDB();
+const supabase = require('./config/supabaseConfig');
+supabase.checkConnection();
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -73,19 +75,6 @@ const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server đang chạy tại port ${PORT}`);
     console.log('Environment:', process.env.NODE_ENV);
-
-    // Kiểm tra riêng Port 587 (TCP Check) - Không cần User/Pass
-    const client = new net.Socket();
-    console.log('Testing connection to smtp-relay.brevo.com:587...');
-
-    client.connect(587, 'smtp-relay.brevo.com', () => {
-        console.log('✅ Port 587 is OPEN and reachable!');
-        client.destroy();
-    });
-
-    client.on('error', (err) => {
-        console.error('❌ Port 587 is BLOCKED or Unreachable:', err.message);
-    });
 });
 
 // Handle unhandled promise rejections
