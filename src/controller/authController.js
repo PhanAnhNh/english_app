@@ -39,9 +39,9 @@ const register = async (req, res) => {
 // Login cho Flutter app - chỉ trả về tokens, KHÔNG set cookie
 const login = async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, logoutOthers } = req.body;
         const deviceInfo = getDeviceInfo(req);
-        const result = await authService.login(username, password, deviceInfo);
+        const result = await authService.login(username, password, deviceInfo, logoutOthers === true || logoutOthers === 'true');
         // Không set cookie, chỉ trả về tokens trong response body cho Flutter app
         res.json({
             message: result.message,
@@ -57,11 +57,11 @@ const login = async (req, res) => {
 // Login cho Web Admin - set cookies cho cả access và refresh token
 const adminLogin = async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, logoutOthers } = req.body;
         const deviceInfo = getDeviceInfo(req);
         deviceInfo.deviceType = 'web'; // Force web type for admin
-        const result = await authService.adminLogin(username, password, deviceInfo);
-        
+        const result = await authService.adminLogin(username, password, deviceInfo, logoutOthers === true || logoutOthers === 'true');
+
         // Set cookies cho web admin (HttpOnly, Secure)
         if (result && result.accessToken) {
             res.cookie('accessToken', result.accessToken, cookieOptions());
@@ -159,7 +159,7 @@ const logout = async (req, res) => {
 const logoutAll = async (req, res) => {
     try {
         await authService.revokeAllUserTokens(req.user.id);
-        
+
         // Clear cookies
         res.clearCookie('accessToken', {
             httpOnly: true,

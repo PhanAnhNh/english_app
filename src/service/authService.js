@@ -69,11 +69,19 @@ const register = async (userData) => {
     };
 };
 
-const login = async (username, password, deviceInfo = {}) => {
+const login = async (username, password, deviceInfo = {}, logoutOthers = false) => {
     const user = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
         throw new Error('Sai username hoặc password');
+    }
+
+    // Nếu yêu cầu đăng xuất các thiết bị khác
+    if (logoutOthers) {
+        await RefreshToken.updateMany(
+            { userId: user._id, isRevoked: false },
+            { isRevoked: true }
+        );
     }
 
     // Tạo tokens
@@ -117,7 +125,7 @@ const login = async (username, password, deviceInfo = {}) => {
     };
 };
 
-const adminLogin = async (username, password, deviceInfo = {}) => {
+const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = false) => {
     const user = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
@@ -127,6 +135,14 @@ const adminLogin = async (username, password, deviceInfo = {}) => {
     // Chỉ cho phép admin
     if (user.role !== 'admin') {
         throw new Error('Chỉ Admin được phép đăng nhập vào web admin');
+    }
+
+    // Nếu yêu cầu đăng xuất các thiết bị khác
+    if (logoutOthers) {
+        await RefreshToken.updateMany(
+            { userId: user._id, isRevoked: false },
+            { isRevoked: true }
+        );
     }
 
     // Tạo tokens
