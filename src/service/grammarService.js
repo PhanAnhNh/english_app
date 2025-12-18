@@ -2,9 +2,7 @@ const Grammar = require('../model/Grammar');
 const GrammarCategory = require('../model/GrammarCategory');
 
 const getGrammars = async (filters) => {
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', level, search, categoryId } = filters;
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 10;
+    const { page = 1, limit, sortBy = 'createdAt', sortOrder = 'asc', level, search, categoryId } = filters;
 
     let filter = {};
 
@@ -22,19 +20,30 @@ const getGrammars = async (filters) => {
         ];
     }
 
-    const skip = (pageNum - 1) * limitNum;
-
     // Count total with filters applied
     const total = await Grammar.countDocuments(filter);
 
-    // Find with filters, then paginate
-    const data = await Grammar.find(filter)
-        .populate('categoryId')  // Populate categoryId để frontend có thể hiển thị và filter
-        .skip(skip)
-        .limit(limitNum)
+    // Find with filters
+    let query = Grammar.find(filter)
+        .populate('categoryId')
         .sort({ createdAt: -1 });
 
-    return { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum), data };
+    if (limit && !isNaN(parseInt(limit))) {
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+        query = query.skip(skip).limit(limitNum);
+    }
+
+    const data = await query;
+
+    return {
+        total,
+        page: parseInt(page) || 1,
+        limit: limit ? parseInt(limit) : total,
+        totalPages: limit ? Math.ceil(total / parseInt(limit)) : 1,
+        data
+    };
 };
 
 const getGrammarById = async (grammarId) => {
@@ -213,10 +222,7 @@ const deleteGrammarCategory = async (categoryId) => {
 };
 
 const getGrammarsByCategory = async (categoryId, filters) => {
-    const { page = 1, limit = 10, level } = filters;
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 10;
-    const skip = (pageNum - 1) * limitNum;
+    const { page = 1, limit, level } = filters;
 
     let filter = {
         categoryId,
@@ -226,17 +232,24 @@ const getGrammarsByCategory = async (categoryId, filters) => {
     if (level) filter.level = level;
 
     const total = await Grammar.countDocuments(filter);
-    const data = await Grammar.find(filter)
+    let query = Grammar.find(filter)
         .populate('categoryId', 'name icon')
-        .skip(skip)
-        .limit(limitNum)
         .sort({ createdAt: -1 });
+
+    if (limit && !isNaN(parseInt(limit))) {
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+        query = query.skip(skip).limit(limitNum);
+    }
+
+    const data = await query;
 
     return {
         total,
-        page: pageNum,
-        limit: limitNum,
-        totalPages: Math.ceil(total / limitNum),
+        page: parseInt(page) || 1,
+        limit: limit ? parseInt(limit) : total,
+        totalPages: limit ? Math.ceil(total / parseInt(limit)) : 1,
         data
     };
 };

@@ -5,21 +5,31 @@ const UserVocabulary = require('../model/UserVocabulary');
 const mongoose = require('mongoose');
 
 const getTopics = async (filters) => {
-    const { page = 1, limit = 100, sortBy = 'createdAt', sortOrder = 'asc', level } = filters;
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 100;
+    const { page = 1, limit, sortBy = 'createdAt', sortOrder = 'asc', level } = filters;
     let filter = level ? { level } : {};
 
-    const skip = (pageNum - 1) * limitNum;
     const sortOrderNum = sortOrder === 'asc' ? 1 : -1;
 
     const total = await Topic.countDocuments(filter);
-    const data = await Topic.find(filter)
-        .sort({ [sortBy]: sortOrderNum })
-        .skip(skip)
-        .limit(limitNum);
+    let query = Topic.find(filter)
+        .sort({ [sortBy]: sortOrderNum });
 
-    return { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum), data };
+    if (limit && !isNaN(parseInt(limit))) {
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+        query = query.skip(skip).limit(limitNum);
+    }
+
+    const data = await query;
+
+    return {
+        total,
+        page: parseInt(page) || 1,
+        limit: limit ? parseInt(limit) : total,
+        totalPages: limit ? Math.ceil(total / parseInt(limit)) : 1,
+        data
+    };
 };
 
 const getTopicById = async (topicId) => {

@@ -2,17 +2,27 @@ const topicService = require('../service/topicService');
 
 const getAllTopics = async (req, res) => {
     try {
+        const { page, limit } = req.query;
 
-        const userId = req.user ? req.user.id : null;
-
-        if (!userId) {
-            return res.status(400).json({ message: "User ID not found via Token" });
+        // Nếu có page hoặc limit (dấu hiệu từ Admin hoặc App muốn phân trang)
+        // HOẶC nếu user là Admin (kiểm tra qua req.user.role nếu có, hoặc đơn giản phụ thuộc param)
+        if (page || limit) {
+            const result = await topicService.getTopics(req.query);
+            return res.status(200).json(result);
         }
 
-        // GỌI HÀM MỚI BẠN VỪA VIẾT TRONG SERVICE
-        const topics = await topicService.getTopicsWithProgress(userId);
+        // Logic cũ cho Mobile App (khi cần tiến độ học user)
+        const userId = req.user ? req.user.id : null;
+        if (!userId) {
+            // Nếu không có user login mà cũng không phân trang -> vẫn trả về list topic thuần (ko progress)
+            const result = await topicService.getTopics(req.query);
+            return res.status(200).json(result);
+        }
 
+        // GỌI HÀM LẤY TIẾN ĐỘ CHO APP
+        const topics = await topicService.getTopicsWithProgress(userId);
         return res.status(200).json(topics);
+
     } catch (e) {
         console.log(e);
         return res.status(500).json({ message: e.message });

@@ -2,9 +2,7 @@ const Exercise = require('../model/Exercise');
 const Topic = require('../model/Topic');
 
 const getExercises = async (filters) => {
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, topicId, search } = filters;
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 10;
+    const { page = 1, limit, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, topicId, search } = filters;
 
     let filter = {};
     if (skill) filter.skill = skill;
@@ -20,11 +18,25 @@ const getExercises = async (filters) => {
         ];
     }
 
-    const skip = (pageNum - 1) * limitNum;
     const total = await Exercise.countDocuments(filter);
-    const data = await Exercise.find(filter).skip(skip).limit(limitNum).sort({ createdAt: -1 }).populate('topicId', 'name');
+    let query = Exercise.find(filter).sort({ createdAt: -1 }).populate('topicId', 'name');
 
-    return { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum), data };
+    if (limit && !isNaN(parseInt(limit))) {
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+        query = query.skip(skip).limit(limitNum);
+    }
+
+    const data = await query;
+
+    return {
+        total,
+        page: parseInt(page) || 1,
+        limit: limit ? parseInt(limit) : total,
+        totalPages: limit ? Math.ceil(total / parseInt(limit)) : 1,
+        data
+    };
 };
 
 const getExerciseById = async (exerciseId) => {

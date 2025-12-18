@@ -48,9 +48,7 @@ const addUser = async (userData, adminId) => {
 };
 
 const getUsers = async (filters) => {
-    const { page = 1, limit = 10, role, search, level } = filters;
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 10;
+    const { page = 1, limit, role, search, level } = filters;
 
     // Tạo bộ lọc
     let filter = {};
@@ -64,20 +62,25 @@ const getUsers = async (filters) => {
         ];
     }
 
-    const skip = (pageNum - 1) * limitNum;
     const total = await User.countDocuments(filter);
-
-    const users = await User.find(filter)
+    let query = User.find(filter)
         .select('-passwordHash')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limitNum);
+        .sort({ createdAt: -1 });
+
+    if (limit && !isNaN(parseInt(limit))) {
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+        query = query.skip(skip).limit(limitNum);
+    }
+
+    const users = await query;
 
     return {
         total,
-        page: pageNum,
-        limit: limitNum,
-        totalPages: Math.ceil(total / limitNum),
+        page: parseInt(page) || 1,
+        limit: limit ? parseInt(limit) : total,
+        totalPages: limit ? Math.ceil(total / parseInt(limit)) : 1,
         data: users
     };
 };

@@ -58,12 +58,20 @@ const getVocabularies = async (filters) => {
         // Get Total Count first
         const total = await Vocabulary.countDocuments(filter);
 
-        // THỰC HIỆN QUERY with Pagination
-        const data = await Vocabulary.find(filter)
+        // Build Query
+        let query = Vocabulary.find(filter)
             .populate('topic', 'name')
-            .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 }) // Sort
-            .skip(skip)
-            .limit(limitNum);
+            .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 });
+
+        // Apply Pagination ONLY if limit is provided and valid
+        if (limit && !isNaN(parseInt(limit))) {
+            const pageNum = parseInt(page) || 1;
+            const limitNum = parseInt(limit);
+            const skip = (pageNum - 1) * limitNum;
+            query = query.skip(skip).limit(limitNum);
+        }
+
+        const data = await query;
 
         console.log("✅ Query executed successfully");
         console.log("📊 Number of vocabularies found:", data.length);
