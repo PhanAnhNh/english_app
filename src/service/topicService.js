@@ -2,6 +2,7 @@ const Topic = require('../model/Topic');
 const Vocabulary = require('../model/Vocabulary');
 const Exercise = require('../model/Exercise');
 const UserVocabulary = require('../model/UserVocabulary');
+const Exercise = require('../model/Exercise');
 const mongoose = require('mongoose');
 
 const getTopics = async (filters) => {

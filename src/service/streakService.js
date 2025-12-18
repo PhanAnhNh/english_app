@@ -29,8 +29,6 @@ const updateStreak = async (userId) => {
         // Lấy mốc 00:00:00 của ngày hôm nay
         const todayZero = new Date().setHours(0, 0, 0, 0);
 
-        // Lấy mốc 00:00:00 của ngày học cuối cùng
-        // (Cần check kỹ để tránh lỗi nếu lastStudyDate bị null, dù database có default)
         const lastDateZero = streak.lastStudyDate
             ? new Date(streak.lastStudyDate).setHours(0, 0, 0, 0)
             : 0;
