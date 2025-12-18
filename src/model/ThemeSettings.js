@@ -1,11 +1,28 @@
 const mongoose = require('mongoose');
 
 const ThemeSettingsSchema = new mongoose.Schema({
-    primaryColor: { type: String, default: '#ffc107' }, // Golden yellow
-    secondaryColor: { type: String, default: '#1a1d29' }, // Dark navy
-    accentColor: { type: String, default: '#ffdb4d' }, // Light yellow
-    backgroundColor: { type: String, default: '#0f1117' }, // Very dark
+    primaryColor: { type: String, default: '#ffc107' },
+    secondaryColor: { type: String, default: '#1a1d29' },
+    accentColor: { type: String, default: '#ffdb4d' },
+    backgroundColor: { type: String, default: '#0f1117' },
     textColor: { type: String, default: '#ffffff' },
+
+    // New granular colors
+    footerColor: { type: String, default: '#0f1117' },
+    heroHeadlineColor: { type: String, default: '#ffc107' },
+    cardColor: { type: String, default: 'rgba(26, 29, 41, 0.7)' },
+    inputBackgroundColor: { type: String, default: 'rgba(255, 255, 255, 0.05)' },
+    successColor: { type: String, default: '#28a745' },
+    errorColor: { type: String, default: '#dc3545' },
+
+    // Chatbot specific colors
+    chatWindowColor: { type: String, default: '#ffffff' },
+    botBubbleColor: { type: String, default: '#ffffff' },
+    botTextColor: { type: String, default: '#333333' },
+    userBubbleColor: { type: String, default: '#1a1d29' },
+    userTextColor: { type: String, default: '#ffffff' },
+    suggestedBgColor: { type: String, default: '#ffffff' },
+    suggestedTextColor: { type: String, default: '#1a1d29' },
 
     // Gradient colors
     gradientStart: { type: String, default: '#ffc107' },
