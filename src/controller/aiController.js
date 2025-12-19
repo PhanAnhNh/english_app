@@ -15,15 +15,15 @@ exports.chatWithHamster = async (req, res) => {
             });
         }
 
-        // Lấy cấu hình tính cách từ DB hihi
+        // Lấy cấu hình tính cách từ DB
         const config = await ChatbotConfig.findOne({ isActive: true }) || {
-            personality: "Bạn là Bee-Bot (chuột hamster Beelingual). Hãy trả lời vui nhộn bằng tiếng Việt.",
+            personality: "Bạn là Bee-Bot (chuột hamster Beelingual).",
             maxTokens: 200
         };
 
         console.log('Using MaxTokens:', config.maxTokens);
 
-        // Tạo một "Kho kiến thức" từ tất cả các câu hỏi gợi ý có câu trả lời hihi
+        // Tạo một "Kho kiến thức" từ tất cả các câu hỏi gợi ý có câu trả lời
         let knowledgeBase = "";
         if (config.suggestedQuestions && config.suggestedQuestions.length > 0) {
             const facts = config.suggestedQuestions
@@ -40,20 +40,73 @@ exports.chatWithHamster = async (req, res) => {
             apiKey: process.env.GEMINI_API_KEY
         });
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash-lite",
-            contents: `${config.personality}${knowledgeBase}\n\nCâu hỏi từ người dùng: ${message}`,
-            safetySettings: [
-                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-            ]
-        });
+        // Danh sách các model Gemma 3 để fallback
+        const gemmaModels = [
+            "gemma-3-27b-it",
+            "gemma-3-12b-it",
+            "gemma-3-4b-it",
+            "gemma-3n-e4b-it",
+            "gemma-3n-e2b-it",
+            "gemma-3-1b-it"
+        ];
 
-        // Lấy text trả về an toàn hihi
-        const replyText = response?.text || "Cụ bị Google 'xích' rồi, không nói được câu này đâu sen ơi... (Safety Block hihi)";
-        console.log('AI Response:', replyText);
+        let responseText = "";
+        let usedModel = "";
+        let lastError = null;
+
+        // Thử từng model trong danh sách
+        for (const modelName of gemmaModels) {
+            try {
+                console.log(`Attempting to use model: ${modelName}...`);
+                const prompt = `
+### SYSTEM INSTRUCTIONS
+Tính cách và vai trò của bạn: ${config.personality}
+Ngôn ngữ phản hồi: Tiếng Việt.
+
+### KNOWLEDGE BASE
+${knowledgeBase || "Bạn là một trợ lý thông minh, hãy sử dụng kiến thức chung để trả lời."}
+
+### USER CONTEXT
+Người dùng đang trò chuyện với bạn qua ứng dụng học tiếng Anh Beelingual.
+
+### QUESTION
+${message}
+
+### RESPONSE GUIDELINES
+- Trả lời ngắn gọn, súc tích (dưới 100 từ).
+- Tuyệt đối tuân thủ tính cách đã được mô tả ở trên trong mọi câu trả lời.
+- Nếu không biết thông tin, hãy trả lời dựa trên tính cách nhân vật (đừng chỉ nói "tôi không biết" một cách máy móc).
+`.trim();
+
+                const result = await ai.models.generateContent({
+                    model: modelName,
+                    contents: prompt,
+                    safetySettings: [
+                        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+                    ]
+                });
+
+                responseText = result.text;
+                usedModel = modelName;
+                console.log(`Success with model: ${modelName}`);
+                break; // Thành công thì thoát vòng lặp
+            } catch (error) {
+                console.error(`Model ${modelName} failed:`, error.message);
+                lastError = error;
+                // Tiếp tục vòng lặp sang model tiếp theo
+            }
+        }
+
+        if (!responseText && lastError) {
+            throw lastError; // Nếu tất cả model đều xịt thì quăng lỗi ra ngoài
+        }
+
+        // Lấy text trả về an toàn
+        const replyText = responseText || "Cụ bị Google 'xích' rồi, không nói được câu này đâu sen ơi... (Safety Block)";
+        console.log(`AI Response (${usedModel}):`, replyText);
 
         res.json({
             success: true,
@@ -66,7 +119,7 @@ exports.chatWithHamster = async (req, res) => {
         console.error('Message:', error.message);
         console.dir(error, { depth: null });
 
-        // Lấy cấu hình lỗi từ DB hihi
+        // Lấy cấu hình lỗi từ DB
         let config = await ChatbotConfig.findOne({ isActive: true });
 
         let errorMsg = config?.errorMessage || 'Cụ đang bận gặm hạt hướng dương, tí quay lại sau nhé!';
@@ -93,11 +146,11 @@ exports.getChatConfig = async (req, res) => {
         let config = await ChatbotConfig.findOne({ isActive: true });
 
         if (!config) {
-            // Tạo default nếu chưa có hihi
+            // Tạo default nếu chưa có
             config = await ChatbotConfig.create({
                 botName: 'Bee-Bot',
-                personality: 'Bạn là Bee-Bot (chuột hamster Beelingual).',
-                welcomeMessage: 'Chào con sen! Cụ Hamster Bee-Bot đây. Hôm nay định lười học tiếng Anh hay gì mà tìm cụ? hihi',
+                personality: 'Bạn là Bee-Bot.',
+                welcomeMessage: 'Chào con sen! Cụ Bee-Bot đây. Hôm nay định lười học tiếng Anh hay gì mà tìm cụ?',
                 suggestedQuestions: [
                     {
                         text: 'App này có gì hay ?',
