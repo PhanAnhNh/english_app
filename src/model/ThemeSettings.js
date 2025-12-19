@@ -17,6 +17,7 @@ const ThemeSettingsSchema = new mongoose.Schema({
 
     // Chatbot specific colors
     chatWindowColor: { type: String, default: '#ffffff' },
+    chatHeaderTextColor: { type: String, default: '#1a1d29' },
     botBubbleColor: { type: String, default: '#ffffff' },
     botTextColor: { type: String, default: '#333333' },
     userBubbleColor: { type: String, default: '#1a1d29' },
