@@ -40,15 +40,14 @@ exports.chatWithHamster = async (req, res) => {
             apiKey: process.env.GEMINI_API_KEY
         });
 
+        // Kiểm tra xem đây có phải là câu hỏi gợi ý không
+        const suggestedQuestion = config.suggestedQuestions?.find(q => q.text.toLowerCase() === message.toLowerCase());
+        const isSuggested = !!suggestedQuestion;
+
         // Danh sách các model Gemma 3 để fallback
-        const gemmaModels = [
-            "gemma-3-27b-it",
-            "gemma-3-12b-it",
-            "gemma-3-4b-it",
-            "gemma-3n-e4b-it",
-            "gemma-3n-e2b-it",
-            "gemma-3-1b-it"
-        ];
+        const gemmaModels = isSuggested
+            ? ["gemma-3-4b-it", "gemma-3-12b-it", "gemma-3-27b-it", "gemma-3n-e4b-it"]
+            : ["gemma-3-27b-it", "gemma-3-12b-it", "gemma-3-4b-it", "gemma-3n-e4b-it"];
 
         let responseText = "";
         let usedModel = "";
@@ -57,14 +56,34 @@ exports.chatWithHamster = async (req, res) => {
         // Thử từng model trong danh sách
         for (const modelName of gemmaModels) {
             try {
-                console.log(`Attempting to use model: ${modelName}...`);
-                const prompt = `
+                // Nhiệt độ thấp cho 4B để tránh "ảo giác", cao hơn cho 12B/27B để linh hoạt
+                const isSmallModel = modelName.includes('4b') || modelName.includes('2b') || modelName.includes('1b');
+                const temperature = isSmallModel ? 0.4 : 0.7;
+
+                console.log(`Attempting to use model: ${modelName} (isSuggested: ${isSuggested}, Temp: ${temperature})...`);
+
+                let promptText = "";
+                if (isSuggested) {
+                    // Prompt siêu ngắn cho câu hỏi gợi ý để 4B xử lý chuẩn xác
+                    promptText = `
+### ROLE: ${config.personality}
+### USER QUESTION: ${message}
+### FACT: ${suggestedQuestion.response}
+### GUIDELINE: Trả lời dựa trên FACT và ROLE một cách tự nhiên, ngắn gọn.
+`.trim();
+                } else {
+                    // Prompt đầy đủ cho chat tự do
+                    promptText = `
 ### SYSTEM INSTRUCTIONS
 Tính cách và vai trò của bạn: ${config.personality}
 Ngôn ngữ phản hồi: Tiếng Việt.
 
 ### KNOWLEDGE BASE
 ${knowledgeBase || "Bạn là một trợ lý thông minh, hãy sử dụng kiến thức chung để trả lời."}
+
+### EXAMPLES (Hãy bắt chước tông giọng này)
+Người dùng: "App này có gì hay?"
+Phản hồi: "Hàng nghìn từ vựng và bài tập cực phẩm đang chờ bạn đó! Học ngay đi cho bớt lười nhé!"
 
 ### USER CONTEXT
 Người dùng đang trò chuyện với bạn qua ứng dụng học tiếng Anh Beelingual.
@@ -75,18 +94,24 @@ ${message}
 ### RESPONSE GUIDELINES
 - Trả lời ngắn gọn, súc tích (dưới 100 từ).
 - Tuyệt đối tuân thủ tính cách đã được mô tả ở trên trong mọi câu trả lời.
-- Nếu không biết thông tin, hãy trả lời dựa trên tính cách nhân vật (đừng chỉ nói "tôi không biết" một cách máy móc).
+- Nếu không biết thông tin, hãy trả lời dựa trên tính cách nhân vật.
 `.trim();
+                }
 
                 const result = await ai.models.generateContent({
                     model: modelName,
-                    contents: prompt,
+                    contents: promptText,
                     safetySettings: [
                         { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
                         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
                         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
                         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-                    ]
+                    ],
+                    generationConfig: {
+                        temperature: temperature,
+                        topP: 0.9,
+                        maxOutputTokens: config.maxTokens || 200,
+                    }
                 });
 
                 responseText = result.text;
