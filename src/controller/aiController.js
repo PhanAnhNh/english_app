@@ -41,7 +41,7 @@ exports.chatWithHamster = async (req, res) => {
         });
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-2.5-flash-lite",
             contents: `${config.personality}${knowledgeBase}\n\nCâu hỏi từ người dùng: ${message}`,
             safetySettings: [
                 { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
