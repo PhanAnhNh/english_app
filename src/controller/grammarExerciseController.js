@@ -1,12 +1,18 @@
 const GrammarExercise = require('../model/GrammarExercise');
+const Grammar = require('../model/Grammar');
 
 exports.getExercises = async (req, res) => {
     try {
-        const { grammarId } = req.query;
+        const { grammarId, grammarCategoryId } = req.query;
         const filter = { isActive: true };
 
         if (grammarId) {
             filter.grammarId = grammarId;
+        } else if (grammarCategoryId) {
+            // Find all grammars in this category
+            const grammars = await Grammar.find({ categoryId: grammarCategoryId }).select('_id');
+            const grammarIds = grammars.map(g => g._id);
+            filter.grammarId = { $in: grammarIds };
         }
 
         const exercises = await GrammarExercise.find(filter)
