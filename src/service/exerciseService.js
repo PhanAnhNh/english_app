@@ -9,7 +9,13 @@ const getExercises = async (filters) => {
     if (skill) filter.skill = skill;
     if (level) filter.level = level;
     if (type) filter.type = type;
-    if (topic || topicId) filter.topicId = topic || topicId;
+    // Xử lý lọc topicId (bao gồm cả trường hợp topicId=null)
+    const tId = topicId || topic;
+    if (tId === 'null') {
+        filter.topicId = null;
+    } else if (tId) {
+        filter.topicId = tId;
+    }
 
     if (search) {
         filter.$or = [
