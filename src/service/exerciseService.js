@@ -1,5 +1,6 @@
 const Exercise = require('../model/Exercise');
 const Topic = require('../model/Topic');
+const mongoose = require('mongoose');
 
 const getExercises = async (filters) => {
     const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, topicId, search, random } = filters;
@@ -21,8 +22,15 @@ const getExercises = async (filters) => {
     // Nếu có tham số random=true, sử dụng $sample để lấy ngẫu nhiên cực nhanh
     if (random === 'true' || random === true) {
         const limitNum = parseInt(limit) || 10;
+
+        // aggregate cần ObjectId thực sự, không tự ép kiểu từ string như find()
+        const matchFilter = { ...filter };
+        if (matchFilter.topicId && typeof matchFilter.topicId === 'string' && mongoose.Types.ObjectId.isValid(matchFilter.topicId)) {
+            matchFilter.topicId = new mongoose.Types.ObjectId(matchFilter.topicId);
+        }
+
         const data = await Exercise.aggregate([
-            { $match: filter },
+            { $match: matchFilter },
             { $sample: { size: limitNum } }
         ]);
 
