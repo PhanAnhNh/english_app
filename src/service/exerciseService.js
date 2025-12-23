@@ -2,7 +2,7 @@ const Exercise = require('../model/Exercise');
 const Topic = require('../model/Topic');
 
 const getExercises = async (filters) => {
-    const { page = 1, limit, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, topicId, search } = filters;
+    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, topicId, search, random } = filters;
 
     let filter = {};
     if (skill) filter.skill = skill;
@@ -18,8 +18,28 @@ const getExercises = async (filters) => {
         ];
     }
 
+    // Nếu có tham số random=true, sử dụng $sample để lấy ngẫu nhiên cực nhanh
+    if (random === 'true' || random === true) {
+        const limitNum = parseInt(limit) || 10;
+        const data = await Exercise.aggregate([
+            { $match: filter },
+            { $sample: { size: limitNum } }
+        ]);
+
+        // Populate topicId cho trang Admin/App hiển thị tên chủ đề
+        await Exercise.populate(data, { path: 'topicId', select: 'name' });
+
+        return {
+            total: data.length,
+            page: 1,
+            limit: limitNum,
+            totalPages: 1,
+            data
+        };
+    }
+
     const total = await Exercise.countDocuments(filter);
-    let query = Exercise.find(filter).sort({ createdAt: -1 }).populate('topicId', 'name');
+    let query = Exercise.find(filter).sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 }).populate('topicId', 'name');
 
     if (limit && !isNaN(parseInt(limit))) {
         const pageNum = parseInt(page) || 1;
