@@ -1,13 +1,14 @@
 const GrammarExercise = require('../model/GrammarExercise');
 const Grammar = require('../model/Grammar');
+const mongoose = require('mongoose');
 
 exports.getExercises = async (req, res) => {
     try {
-        const { grammarId, grammarCategoryId } = req.query;
+        const { grammarId, grammarCategoryId, random, limit } = req.query;
         const filter = { isActive: true };
 
         if (grammarId) {
-            filter.grammarId = grammarId;
+            filter.grammarId = new mongoose.Types.ObjectId(grammarId);
         } else if (grammarCategoryId) {
             // Find all grammars in this category
             const grammars = await Grammar.find({ categoryId: grammarCategoryId }).select('_id');
@@ -15,8 +16,22 @@ exports.getExercises = async (req, res) => {
             filter.grammarId = { $in: grammarIds };
         }
 
-        const exercises = await GrammarExercise.find(filter)
-            .populate('grammarId', 'title level');
+        let exercises;
+        const limitVal = parseInt(limit) || 10;
+
+        if (random === 'true') {
+            exercises = await GrammarExercise.aggregate([
+                { $match: filter },
+                { $sample: { size: limitVal } }
+            ]);
+
+            // Populate manually after aggregate since aggregate doesn't support model.populate easily in one go
+            exercises = await GrammarExercise.populate(exercises, { path: 'grammarId', select: 'title level' });
+        } else {
+            exercises = await GrammarExercise.find(filter)
+                .populate('grammarId', 'title level')
+                .limit(limitVal);
+        }
 
         res.status(200).json({
             success: true,
@@ -98,42 +113,5 @@ exports.deleteExercise = async (req, res) => {
         res.status(200).json({ success: true, message: "Đã xóa bài tập thành công." });
     } catch (error) {
         res.status(500).json({ message: "Lỗi khi xóa bài tập", error: error.message });
-    }
-};
-
-// Xóa bài tập (Dành cho Admin)
-exports.deleteExercise = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const exercise = await GrammarExercise.findById(id);
-
-        if (!exercise) {
-            return res.status(404).json({ message: "Không tìm thấy bài tập." });
-        }
-
-        await GrammarExercise.findByIdAndDelete(id);
-        res.status(200).json({ success: true, message: "Đã xóa bài tập thành công." });
-    } catch (error) {
-        res.status(500).json({ message: "Lỗi khi xóa bài tập", error: error.message });
-    }
-};
-
-// Cập nhật bài tập (Dành cho Admin)
-exports.updateExercise = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updatedExercise = await GrammarExercise.findByIdAndUpdate(
-            id,
-            req.body,
-            { new: true, runValidators: true }
-        );
-
-        if (!updatedExercise) {
-            return res.status(404).json({ message: "Không tìm thấy bài tập." });
-        }
-
-        res.status(200).json({ success: true, data: updatedExercise });
-    } catch (error) {
-        res.status(500).json({ message: "Lỗi khi cập nhật bài tập", error: error.message });
     }
 };
