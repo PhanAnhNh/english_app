@@ -10,7 +10,21 @@ const getGrammars = async (filters) => {
     if (level) filter.level = level;
 
     // Filter by categoryId
-    if (categoryId) filter.categoryId = categoryId;
+    if (categoryId) {
+        const mongoose = require('mongoose');
+        if (mongoose.Types.ObjectId.isValid(categoryId)) {
+            filter.categoryId = categoryId;
+        } else {
+            // Nếu ID không hợp lệ, trả về kết quả rỗng thay vì lỗi 500
+            return {
+                total: 0,
+                page: parseInt(page) || 1,
+                limit: limit ? parseInt(limit) : 0,
+                totalPages: 0,
+                data: []
+            };
+        }
+    }
 
     // Filter by search (title or content)
     if (search) {
@@ -223,6 +237,17 @@ const deleteGrammarCategory = async (categoryId) => {
 
 const getGrammarsByCategory = async (categoryId, filters) => {
     const { page = 1, limit, level } = filters;
+
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return {
+            total: 0,
+            page: parseInt(page) || 1,
+            limit: limit ? parseInt(limit) : 0,
+            totalPages: 0,
+            data: []
+        };
+    }
 
     let filter = {
         categoryId,

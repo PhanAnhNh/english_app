@@ -41,12 +41,57 @@ const getTopicById = async (topicId) => {
 };
 
 const createTopic = async (topicData) => {
+    const totalTopics = await Topic.countDocuments();
+    let requestedOrder = parseInt(topicData.order);
+
+    // 1. Tự động gán order nếu thiếu hoặc vượt quá giới hạn
+    if (isNaN(requestedOrder) || requestedOrder > totalTopics + 1 || requestedOrder < 1) {
+        topicData.order = totalTopics + 1;
+    } else {
+        // 2. Dồn hàng: Tăng order của các topic đứng sau
+        await Topic.updateMany(
+            { order: { $gte: requestedOrder } },
+            { $inc: { order: 1 } }
+        );
+        topicData.order = requestedOrder;
+    }
+
     const topic = new Topic(topicData);
     await topic.save();
     return topic;
 };
 
 const updateTopic = async (topicId, topicData) => {
+    const currentTopic = await Topic.findById(topicId);
+    if (!currentTopic) throw new Error('Không tìm thấy chủ đề');
+
+    if (topicData.order !== undefined) {
+        const totalTopics = await Topic.countDocuments();
+        let newOrder = parseInt(topicData.order);
+        const oldOrder = currentTopic.order;
+
+        // Giới hạn newOrder trong khoảng [1, totalTopics]
+        if (newOrder < 1) newOrder = 1;
+        if (newOrder > totalTopics) newOrder = totalTopics;
+
+        if (newOrder !== oldOrder) {
+            if (newOrder < oldOrder) {
+                // Di chuyển lên trên: Tăng các topic ở giữa
+                await Topic.updateMany(
+                    { order: { $gte: newOrder, $lt: oldOrder } },
+                    { $inc: { order: 1 } }
+                );
+            } else {
+                // Di chuyển xuống dưới: Giảm các topic ở giữa
+                await Topic.updateMany(
+                    { order: { $gt: oldOrder, $lte: newOrder } },
+                    { $inc: { order: -1 } }
+                );
+            }
+            topicData.order = newOrder;
+        }
+    }
+
     const updated = await Topic.findByIdAndUpdate(topicId, topicData, { new: true });
     return updated;
 };
@@ -57,13 +102,20 @@ const deleteTopic = async (topicId) => {
         throw new Error('Không tìm thấy chủ đề');
     }
 
-    // Xóa image trên Cloudinary
+    const deletedOrder = topic.order;
 
     // XÓA LIÊN KẾT (CASCADING DELETE) 
     await Vocabulary.deleteMany({ topic: topicId });
     await Exercise.deleteMany({ topicId: topicId });
 
     await Topic.findByIdAndDelete(topicId);
+
+    // DỒN HÀNG LÊN: Giảm order của các bài đứng sau
+    await Topic.updateMany(
+        { order: { $gt: deletedOrder } },
+        { $inc: { order: -1 } }
+    );
+
     return { message: 'Đã xóa chủ đề và toàn bộ dữ liệu liên quan thành công' };
 };
 
