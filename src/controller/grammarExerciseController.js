@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 
 exports.getExercises = async (req, res) => {
     try {
-        const { grammarId, grammarCategoryId, random, limit } = req.query;
+        const { grammarId, grammarCategoryId, random, limit, page, search } = req.query;
         const filter = { isActive: true };
 
         if (grammarId) {
@@ -16,26 +16,55 @@ exports.getExercises = async (req, res) => {
             filter.grammarId = { $in: grammarIds };
         }
 
-        let exercises;
+        // Add search functionality (question or explanation)
+        if (search) {
+            filter.$or = [
+                { question: { $regex: search, $options: 'i' } },
+                { explanation: { $regex: search, $options: 'i' } }
+            ];
+        }
+
         const limitVal = parseInt(limit) || 10;
+        const pageNum = parseInt(page) || 1;
 
         if (random === 'true') {
-            exercises = await GrammarExercise.aggregate([
+            const exercises = await GrammarExercise.aggregate([
                 { $match: filter },
                 { $sample: { size: limitVal } }
             ]);
 
-            // Populate manually after aggregate since aggregate doesn't support model.populate easily in one go
-            exercises = await GrammarExercise.populate(exercises, { path: 'grammarId', select: 'title level' });
-        } else {
-            exercises = await GrammarExercise.find(filter)
-                .populate('grammarId', 'title level')
-                .limit(limitVal);
+            // Populate manually after aggregate
+            const populatedExercises = await GrammarExercise.populate(exercises, { path: 'grammarId', select: 'title level' });
+
+            return res.status(200).json({
+                success: true,
+                count: populatedExercises.length,
+                data: populatedExercises,
+                total: populatedExercises.length,
+                page: 1,
+                limit: limitVal,
+                totalPages: 1
+            });
         }
+
+        // Count total for pagination
+        const total = await GrammarExercise.countDocuments(filter);
+        const totalPages = Math.ceil(total / limitVal);
+        const skip = (pageNum - 1) * limitVal;
+
+        const exercises = await GrammarExercise.find(filter)
+            .populate('grammarId', 'title level')
+            .sort({ createdAt: -1 }) // Sort by new
+            .skip(skip)
+            .limit(limitVal);
 
         res.status(200).json({
             success: true,
             count: exercises.length,
+            total: total,
+            page: pageNum,
+            limit: limitVal,
+            totalPages: totalPages,
             data: exercises
         });
     } catch (error) {
