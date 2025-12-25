@@ -11,33 +11,32 @@ const seedData = async () => {
         console.log('✅ Connected to MongoDB');
 
         // 1. Create Topic
-        const cultureTopic = await Topic.create({
-            name: 'Culture',
-            description: 'Explore traditions, customs, and social behaviors from around the world.',
-            level: 'B1',
-            imageUrl: 'https://img.freepik.com/free-vector/world-culture-concept-illustration_114360-10115.jpg',
-            order: 11
+        const travelTopic = await Topic.create({
+            name: 'Travel & Holidays',
+            description: 'Learn how to talk about trips, transport, and famous places.',
+            level: 'A2',
+            imageUrl: 'https://img.freepik.com/free-vector/travel-concept-illustration_114360-1250.jpg',
+            order: 15
         });
-
-        console.log('✅ Created Topic: Culture (A2-B1)');
+        console.log('✅ Created Topic: Travel & Holidays (A2)');
 
         const vocabItems = [
-            { word: 'tradition', meaning: 'truyền thống', level: 'A2', topic: cultureTopic._id },
-            { word: 'custom', meaning: 'phong tục', level: 'B1', topic: cultureTopic._id },
-            { word: 'respect', meaning: 'tôn trọng', level: 'A2', topic: cultureTopic._id },
-            { word: 'celebrate', meaning: 'ăn mừng/kỷ niệm', level: 'A2', topic: cultureTopic._id },
-            { word: 'festival', meaning: 'lễ hội', level: 'A2', topic: cultureTopic._id },
-            { word: 'etiquette', meaning: 'phép lịch sự', level: 'B1', topic: cultureTopic._id },
-            { word: 'greeting', meaning: 'lời chào hỏi', level: 'A2', topic: cultureTopic._id },
-            { word: 'heritage', meaning: 'di sản', level: 'B1', topic: cultureTopic._id },
-            { word: 'diverse', meaning: 'đa dạng', level: 'B1', topic: cultureTopic._id },
-            { word: 'values', meaning: 'giá trị đạo đức', level: 'B1', topic: cultureTopic._id },
-            { word: 'costume', meaning: 'trang phục truyền thống', level: 'B1', topic: cultureTopic._id },
-            { word: 'ceremony', meaning: 'nghi lễ', level: 'B1', topic: cultureTopic._id },
-            { word: 'belief', meaning: 'niềm tin/tín ngưỡng', level: 'B1', topic: cultureTopic._id },
-            { word: 'hospitality', meaning: 'sự hiếu khách', level: 'B1', topic: cultureTopic._id },
-            { word: 'symbol', meaning: 'biểu tượng', level: 'A2', topic: cultureTopic._id },
-            { word: 'generations', meaning: 'các thế hệ', level: 'B1', topic: cultureTopic._id }
+            { word: 'destination', meaning: 'điểm đến', level: 'A2', topic: travelTopic._id },
+            { word: 'luggage', meaning: 'hành lý', level: 'A2', topic: travelTopic._id },
+            { word: 'passport', meaning: 'hộ chiếu', level: 'A2', topic: travelTopic._id },
+            { word: 'souvenir', meaning: 'quà lưu niệm', level: 'A2', topic: travelTopic._id },
+            { word: 'sightseeing', meaning: 'ngắm cảnh', level: 'A2', topic: travelTopic._id },
+            { word: 'itinerary', meaning: 'lịch trình', level: 'A2', topic: travelTopic._id },
+            { word: 'transport', meaning: 'phương tiện giao thông', level: 'A2', topic: travelTopic._id },
+            { word: 'accommodation', meaning: 'chỗ ở (khách sạn...)', level: 'A2', topic: travelTopic._id },
+            { word: 'book', meaning: 'đặt (vé/phòng)', level: 'A2', topic: travelTopic._id },
+            { word: 'flight', meaning: 'chuyến bay', level: 'A2', topic: travelTopic._id },
+            { word: 'tourist', meaning: 'khách du lịch', level: 'A2', topic: travelTopic._id },
+            { word: 'explore', meaning: 'khám phá', level: 'A2', topic: travelTopic._id },
+            { word: 'famous', meaning: 'nổi tiếng', level: 'A2', topic: travelTopic._id },
+            { word: 'journey', meaning: 'hành trình', level: 'A2', topic: travelTopic._id },
+            { word: 'adventure', meaning: 'cuộc phiêu lưu', level: 'A2', topic: travelTopic._id },
+            { word: 'relax', meaning: 'thư giãn', level: 'A2', topic: travelTopic._id }
         ];
         await Vocabulary.insertMany(vocabItems);
         console.log('✅ Created Vocabulary items (16 từ cơ bản A1)');
@@ -45,606 +44,370 @@ const seedData = async () => {
         // 3. Create Exercises (đủ 40 bài tập - câu hỏi tự nhiên hơn, gần gũi như nói chuyện hàng ngày)
         const exercises = [
             // ==================== LISTENING - MULTIPLE CHOICE (15 bài) ====================
-            // ==================== LISTENING - MULTIPLE CHOICE (15 bài - Suy luận) ====================
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What is the speaker demonstrating through their action?',
-                audioUrl: 'When the teacher entered the room, all the students stopped talking and stood up immediately to greet her.',
-                options: [
-                    { text: 'Respect', isCorrect: true },
-                    { text: 'Hospitality', isCorrect: false },
-                    { text: 'Tradition', isCorrect: false },
-                    { text: 'Festival', isCorrect: false }
-                ],
-                correctAnswer: 'Respect',
-                explanation: 'Hành động đứng dậy khi giáo viên vào lớp là biểu hiện của sự tôn trọng (Respect).',
-                level: 'A2',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'Where is the man going for his holiday?',
+                audioUrl: 'I am so happy. Tomorrow, I will fly to Paris. It is my favorite destination.',
+                options: [{ text: 'London', isCorrect: false }, { text: 'Paris', isCorrect: true }, { text: 'New York', isCorrect: false }, { text: 'Tokyo', isCorrect: false }],
+                correctAnswer: 'Paris', explanation: 'Người nói nhắc trực tiếp đến Paris.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What kind of event is the speaker attending?',
-                audioUrl: 'There are colorful lights everywhere, people are dancing in the streets, and the fireworks are about to start in ten minutes!',
-                options: [
-                    { text: 'A funeral', isCorrect: false },
-                    { text: 'A festival', isCorrect: true },
-                    { text: 'A business meeting', isCorrect: false },
-                    { text: 'A library', isCorrect: false }
-                ],
-                correctAnswer: 'A festival',
-                explanation: 'Ánh sáng, nhảy múa và pháo hoa là đặc trưng của một lễ hội (Festival).',
-                level: 'A2',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'What does the woman need to bring to the airport?',
+                audioUrl: 'Oh no! I have my luggage and my ticket, but I cannot find my passport.',
+                options: [{ text: 'Souvenir', isCorrect: false }, { text: 'Camera', isCorrect: false }, { text: 'Passport', isCorrect: true }, { text: 'Book', isCorrect: false }],
+                correctAnswer: 'Passport', explanation: 'Passport là thứ cô ấy đang tìm.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What is the speaker talking about?',
-                audioUrl: 'In this country, it is very common to remove your shoes before entering someone\'s house. Almost everyone does it.',
-                options: [
-                    { text: 'A local custom', isCorrect: true },
-                    { text: 'A national costume', isCorrect: false },
-                    { text: 'A modern technology', isCorrect: false },
-                    { text: 'A natural disaster', isCorrect: false }
-                ],
-                correctAnswer: 'A local custom',
-                explanation: 'Việc cởi giày trước khi vào nhà là một phong tục địa phương (Custom).',
-                level: 'B1',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'What activity are they going to do now?',
+                audioUrl: 'The weather is beautiful. Let’s go sightseeing and take some photos of the city.',
+                options: [{ text: 'Sightseeing', isCorrect: true }, { text: 'Booking a flight', isCorrect: false }, { text: 'Sleeping', isCorrect: false }, { text: 'Eating', isCorrect: false }],
+                correctAnswer: 'Sightseeing', explanation: 'Cụm từ "go sightseeing" được nói rõ.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'How does the speaker feel about the local people?',
-                audioUrl: 'We got lost in the village, but a family invited us in, gave us warm tea, and even offered us a place to sleep.',
-                options: [
-                    { text: 'They are rude', isCorrect: false },
-                    { text: 'They are very diverse', isCorrect: false },
-                    { text: 'They show great hospitality', isCorrect: true },
-                    { text: 'They are afraid of strangers', isCorrect: false }
-                ],
-                correctAnswer: 'They show great hospitality',
-                explanation: 'Mời trà và cho người lạ ngủ nhờ thể hiện sự hiếu khách (Hospitality).',
-                level: 'B1',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'How will they travel to the island?',
+                audioUrl: 'The island is near here, so we will take a boat. It is a cheap transport.',
+                options: [{ text: 'Plane', isCorrect: false }, { text: 'Train', isCorrect: false }, { text: 'Boat', isCorrect: true }, { text: 'Bus', isCorrect: false }],
+                correctAnswer: 'Boat', explanation: 'Phương tiện là boat.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What is the object being described?',
-                audioUrl: 'This white bird is often seen in paintings and posters to represent peace and harmony between nations.',
-                options: [
-                    { text: 'A symbol', isCorrect: true },
-                    { text: 'A costume', isCorrect: false },
-                    { text: 'A greeting', isCorrect: false },
-                    { text: 'A value', isCorrect: false }
-                ],
-                correctAnswer: 'A symbol',
-                explanation: 'Vật đại diện cho một ý tưởng (hòa bình) là một biểu tượng (Symbol).',
-                level: 'A2',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'What did the boy buy for his mother?',
+                audioUrl: 'I went to the gift shop and bought a small souvenir for my mother.',
+                options: [{ text: 'Passport', isCorrect: false }, { text: 'Luggage', isCorrect: false }, { text: 'Souvenir', isCorrect: true }, { text: 'Itinerary', isCorrect: false }],
+                correctAnswer: 'Souvenir', explanation: 'Người con mua souvenir.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What is the speaker teaching?',
-                audioUrl: 'When you are at a formal dinner, remember to keep your phone away and wait for the host to start eating first.',
-                options: [
-                    { text: 'Cooking skills', isCorrect: false },
-                    { text: 'Table etiquette', isCorrect: true },
-                    { text: 'Historical heritage', isCorrect: false },
-                    { text: 'Religious beliefs', isCorrect: false }
-                ],
-                correctAnswer: 'Table etiquette',
-                explanation: 'Quy tắc dùng bữa lịch sự gọi là phép lịch sự (Etiquette).',
-                level: 'B1',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'Where are they going to stay?',
+                audioUrl: 'The hotel is too expensive, so we found a small apartment for our accommodation.',
+                options: [{ text: 'Hotel', isCorrect: false }, { text: 'Apartment', isCorrect: true }, { text: 'Tent', isCorrect: false }, { text: 'Park', isCorrect: false }],
+                correctAnswer: 'Apartment', explanation: 'Accommodation (chỗ ở) họ chọn là apartment.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'Who has lived in this house?',
-                audioUrl: 'My great-grandfather built this house, then my father lived here, and now I am raising my own children in it.',
-                options: [
-                    { text: 'Only one person', isCorrect: false },
-                    { text: 'Many different families', isCorrect: false },
-                    { text: 'Three generations', isCorrect: true },
-                    { text: 'Students from abroad', isCorrect: false }
-                ],
-                correctAnswer: 'Three generations',
-                explanation: 'Cụ, bố và con cái cùng sống trong một ngôi nhà là các thế hệ (Generations).',
-                level: 'B1',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'What does the man need to do for the hotel?',
+                audioUrl: 'The hotel is very busy in summer. You should book your room early.',
+                options: [{ text: 'Clean', isCorrect: false }, { text: 'Book', isCorrect: true }, { text: 'Sell', isCorrect: false }, { text: 'Fix', isCorrect: false }],
+                correctAnswer: 'Book', explanation: 'Book nghĩa là đặt phòng trước.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What did the performers wear?',
-                audioUrl: 'The dancers looked amazing in their handmade silk dresses and gold hats that their ancestors used to wear.',
-                options: [
-                    { text: 'Modern uniforms', isCorrect: false },
-                    { text: 'Traditional costumes', isCorrect: true },
-                    { text: 'Casual clothes', isCorrect: false },
-                    { text: 'Sportswear', isCorrect: false }
-                ],
-                correctAnswer: 'Traditional costumes',
-                explanation: 'Quần áo truyền thống của tổ tiên để lại là trang phục dân tộc (Costume).',
-                level: 'A2',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'What are they doing in the forest?',
+                audioUrl: 'I love nature. Let’s explore the forest and see the birds.',
+                options: [{ text: 'Explore', isCorrect: true }, { text: 'Book', isCorrect: false }, { text: 'Buy', isCorrect: false }, { text: 'Work', isCorrect: false }],
+                correctAnswer: 'Explore', explanation: 'Họ đi khám phá (explore) khu rừng.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What is special about the neighborhood?',
-                audioUrl: 'On this street, you can hear five different languages and find food from every continent in the world.',
-                options: [
-                    { text: 'It is very quiet', isCorrect: false },
-                    { text: 'It is culturally diverse', isCorrect: true },
-                    { text: 'It is very old', isCorrect: false },
-                    { text: 'It is dangerous', isCorrect: false }
-                ],
-                correctAnswer: 'It is culturally diverse',
-                explanation: 'Nhiều ngôn ngữ và đồ ăn từ khắp nơi cho thấy sự đa dạng (Diverse).',
-                level: 'B1',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'Why do many tourists visit this museum?',
+                audioUrl: 'This museum is very famous. It has many old paintings.',
+                options: [{ text: 'It is new', isCorrect: false }, { text: 'It is famous', isCorrect: true }, { text: 'It is small', isCorrect: false }, { text: 'It is cheap', isCorrect: false }],
+                correctAnswer: 'Famous', explanation: 'Bảo tàng nổi tiếng (famous).',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What is the family doing?',
-                audioUrl: 'Today is my grandparents\' 50th wedding anniversary. We have a huge cake and all our relatives are here.',
-                options: [
-                    { text: 'They celebrate a milestone', isCorrect: true },
-                    { text: 'They study heritage', isCorrect: false },
-                    { text: 'They change a custom', isCorrect: false },
-                    { text: 'They learn a greeting', isCorrect: false }
-                ],
-                correctAnswer: 'They celebrate a milestone',
-                explanation: 'Tổ chức tiệc kỷ niệm là hoạt động ăn mừng (Celebrate).',
-                level: 'A2',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'What are they talking about?',
+                audioUrl: 'Our journey to the mountains was long but very beautiful.',
+                options: [{ text: 'A flight', isCorrect: false }, { text: 'A journey', isCorrect: true }, { text: 'A passport', isCorrect: false }, { text: 'A souvenir', isCorrect: false }],
+                correctAnswer: 'A journey', explanation: 'Họ nói về hành trình (journey) đi lên núi.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What happened when the two leaders met?',
-                audioUrl: 'As soon as they saw each other, they smiled, shook hands, and said "It is an honor to meet you".',
-                options: [
-                    { text: 'A greeting', isCorrect: true },
-                    { text: 'A ceremony', isCorrect: false },
-                    { text: 'A belief', isCorrect: false },
-                    { text: 'A tradition', isCorrect: false }
-                ],
-                correctAnswer: 'A greeting',
-                explanation: 'Bắt tay và nói lời chào là hành động chào hỏi (Greeting).',
-                level: 'A2',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'What is the man’s plan for the weekend?',
+                audioUrl: 'It’s been a busy week. I just want to go to the beach and relax.',
+                options: [{ text: 'Work', isCorrect: false }, { text: 'Study', isCorrect: false }, { text: 'Relax', isCorrect: true }, { text: 'Cook', isCorrect: false }],
+                correctAnswer: 'Relax', explanation: 'Anh ấy muốn thư giãn (relax).',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What are the tourists visiting?',
-                audioUrl: 'We are walking through an ancient temple built 1,000 years ago. It is protected by the government as a treasure.',
-                options: [
-                    { text: 'A modern mall', isCorrect: false },
-                    { text: 'A cultural heritage site', isCorrect: true },
-                    { text: 'A new factory', isCorrect: false },
-                    { text: 'A movie theater', isCorrect: false }
-                ],
-                correctAnswer: 'A cultural heritage site',
-                explanation: 'Đền cổ được bảo vệ là di sản văn hóa (Heritage).',
-                level: 'B1',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'What does the girl show her friend?',
+                audioUrl: 'Look at my itinerary. We will visit the museum on Monday and the park on Tuesday.',
+                options: [{ text: 'Passport', isCorrect: false }, { text: 'Souvenir', isCorrect: false }, { text: 'Itinerary', isCorrect: true }, { text: 'Luggage', isCorrect: false }],
+                correctAnswer: 'Itinerary', explanation: 'Cô ấy cho bạn xem lịch trình (itinerary).',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What is the speaker describing?',
-                audioUrl: 'Many people in this village think that if a black cat crosses your path, you will have a bad day.',
-                options: [
-                    { text: 'A scientific fact', isCorrect: false },
-                    { text: 'A superstitious belief', isCorrect: true },
-                    { text: 'A medical etiquette', isCorrect: false },
-                    { text: 'A greeting', isCorrect: false }
-                ],
-                correctAnswer: 'A superstitious belief',
-                explanation: 'Quan niệm về điềm báo là một niềm tin/tín ngưỡng (Belief).',
-                level: 'B1',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'What happened to the woman’s luggage?',
+                audioUrl: 'I am so sad. The airline lost my luggage at the airport.',
+                options: [{ text: 'It is heavy', isCorrect: false }, { text: 'It is new', isCorrect: false }, { text: 'It is lost', isCorrect: true }, { text: 'It is small', isCorrect: false }],
+                correctAnswer: 'It is lost', explanation: 'Hành lý (luggage) bị mất.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What event is taking place?',
-                audioUrl: 'The couple is exchanging rings in front of their families and the music is playing very softly.',
-                options: [
-                    { text: 'A wedding ceremony', isCorrect: true },
-                    { text: 'A sports competition', isCorrect: false },
-                    { text: 'A birthday party', isCorrect: false },
-                    { text: 'A school lesson', isCorrect: false }
-                ],
-                correctAnswer: 'A wedding ceremony',
-                explanation: 'Trao nhẫn là một phần của nghi lễ (Ceremony).',
-                level: 'B1',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'How was their trip to the jungle?',
+                audioUrl: 'It was a great adventure. We saw many wild animals!',
+                options: [{ text: 'Boring', isCorrect: false }, { text: 'Short', isCorrect: false }, { text: 'Adventure', isCorrect: true }, { text: 'Bad', isCorrect: false }],
+                correctAnswer: 'Adventure', explanation: 'Chuyến đi là một cuộc phiêu lưu (adventure).',
+                level: 'A2', topicId: travelTopic._id
             },
             {
-                skill: 'listening',
-                type: 'multiple_choice',
-                questionText: 'What is the speaker most likely talking about?',
-                audioUrl: 'Every year, we pass this secret recipe from our ancestors down to the younger children in the family.',
-                options: [
-                    { text: 'Tradition', isCorrect: true },
-                    { text: 'Hospitality', isCorrect: false },
-                    { text: 'Etiquette', isCorrect: false },
-                    { text: 'Symbol', isCorrect: false }
-                ],
-                correctAnswer: 'Tradition',
-                explanation: 'Việc truyền lại bí quyết từ tổ tiên cho đời sau là một truyền thống (Tradition).',
-                level: 'A2',
-                topicId: cultureTopic._id
+                skill: 'listening', type: 'multiple_choice',
+                questionText: 'What time is the flight?',
+                audioUrl: 'Hurry up! Our flight leaves in two hours.',
+                options: [{ text: 'In two hours', isCorrect: true }, { text: 'In five hours', isCorrect: false }, { text: 'Tomorrow', isCorrect: false }, { text: 'Next week', isCorrect: false }],
+                correctAnswer: 'In two hours', explanation: 'Chuyến bay (flight) khởi hành trong 2 giờ nữa.',
+                level: 'A2', topicId: travelTopic._id
             },
 
             // ==================== READING - MULTIPLE CHOICE (15 bài) ====================
-            // ==================== READING - MULTIPLE CHOICE (15 bài) ====================
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: `Read the text: "In Japan, it is common to bow when meeting someone. The deeper the bow, the more respect you show to the other person."
-What does bowing represent in Japanese culture?`,
-                options: [
-                    { text: 'A way to show respect', isCorrect: true },
-                    { text: 'A type of festival', isCorrect: false },
-                    { text: 'A traditional costume', isCorrect: false },
-                    { text: 'A medical ceremony', isCorrect: false }
-                ],
-                correctAnswer: 'A way to show respect',
-                explanation: 'Cúi chào là cách thể hiện sự tôn trọng (Respect).',
-                level: 'A2', topicId: cultureTopic._id
+                questionText: 'When you travel to another country, you must carry your ________ to show at the airport.',
+                options: [{ text: 'Passport', isCorrect: true }, { text: 'Souvenir', isCorrect: false }, { text: 'Itinerary', isCorrect: false }, { text: 'Destination', isCorrect: false }],
+                correctAnswer: 'Passport', explanation: 'Hộ chiếu là giấy tờ bắt buộc khi đi nước ngoài.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: `Read the text: "Mexico's Day of the Dead is a time when families gather to remember their ancestors. They build altars and share traditional food to honor those who passed away."
-This event is best described as a:`,
-                options: [
-                    { text: 'Festival', isCorrect: true },
-                    { text: 'Greeting', isCorrect: false },
-                    { text: 'Symbol', isCorrect: false },
-                    { text: 'Etiquette', isCorrect: false }
-                ],
-                correctAnswer: 'Festival',
-                explanation: 'Sự kiện tụ họp, có đồ ăn truyền thống và kỷ niệm là một lễ hội (Festival).',
-                level: 'A2', topicId: cultureTopic._id
+                questionText: 'We need to ________ a hotel room for our summer vacation next month.',
+                options: [{ text: 'Relax', isCorrect: false }, { text: 'Explore', isCorrect: false }, { text: 'Book', isCorrect: true }, { text: 'Flight', isCorrect: false }],
+                correctAnswer: 'Book', explanation: 'Book ở đây là động từ mang nghĩa "đặt trước".',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'Which word describes a city where you can find people from many different backgrounds, religions, and countries?',
-                options: [
-                    { text: 'Diverse', isCorrect: true },
-                    { text: 'Traditional', isCorrect: false },
-                    { text: 'Hospitality', isCorrect: false },
-                    { text: 'Ceremony', isCorrect: false }
-                ],
-                correctAnswer: 'Diverse',
-                explanation: 'Đa dạng (Diverse) dùng để chỉ sự pha trộn nhiều nền văn hóa.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'My ________ is very heavy because I put too many clothes in it.',
+                options: [{ text: 'Luggage', isCorrect: true }, { text: 'Passport', isCorrect: false }, { text: 'Souvenir', isCorrect: false }, { text: 'Transport', isCorrect: false }],
+                correctAnswer: 'Luggage', explanation: 'Hành lý (luggage) nặng do đựng nhiều quần áo.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: `Read the text: "In many Middle Eastern countries, it is a _______ to offer tea to any guest who enters your home or shop. Refusing the tea can be seen as impolite."
-Choose the best word to fill the blank:`,
-                options: [
-                    { text: 'Custom', isCorrect: true },
-                    { text: 'Costume', isCorrect: false },
-                    { text: 'Symbol', isCorrect: false },
-                    { text: 'Heritage', isCorrect: false }
-                ],
-                correctAnswer: 'Custom',
-                explanation: 'Mời trà khách là một phong tục (Custom) phổ biến.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Paris is a very popular ________ for tourists from all over the world.',
+                options: [{ text: 'Destination', isCorrect: true }, { text: 'Itinerary', isCorrect: false }, { text: 'Accommodation', isCorrect: false }, { text: 'Luggage', isCorrect: false }],
+                correctAnswer: 'Destination', explanation: 'Destination nghĩa là điểm đến du lịch.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'Read the text: "The Sari is a long piece of colorful cloth draped around the body. It has been worn by women in India for thousands of years." \n The Sari is an example of a:',
-                options: [
-                    { text: 'Traditional costume', isCorrect: true },
-                    { text: 'Modern etiquette', isCorrect: false },
-                    { text: 'Greeting ceremony', isCorrect: false },
-                    { text: 'Religious belief', isCorrect: false }
-                ],
-                correctAnswer: 'Traditional costume',
-                explanation: 'Sari là trang phục truyền thống (Costume) của Ấn Độ.',
-                level: 'A2', topicId: cultureTopic._id
+                questionText: 'The Great Wall of China is a very ________ place. Everyone knows it.',
+                options: [{ text: 'Famous', isCorrect: true }, { text: 'Boring', isCorrect: false }, { text: 'Small', isCorrect: false }, { text: 'Relax', isCorrect: false }],
+                correctAnswer: 'Famous', explanation: 'Famous có nghĩa là nổi tiếng.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'What is "etiquette"?',
-                options: [
-                    { text: 'The set of rules for polite behavior', isCorrect: true },
-                    { text: 'A type of old building', isCorrect: false },
-                    { text: 'A special holiday', isCorrect: false },
-                    { text: 'A family history', isCorrect: false }
-                ],
-                correctAnswer: 'The set of rules for polite behavior',
-                explanation: 'Etiquette là các quy tắc ứng xử lịch sự.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'I bought a small ________ for my sister to remember our trip to Japan.',
+                options: [{ text: 'Itinerary', isCorrect: false }, { text: 'Souvenir', isCorrect: true }, { text: 'Transport', isCorrect: false }, { text: 'Flight', isCorrect: false }],
+                correctAnswer: 'Souvenir', explanation: 'Souvenir là quà lưu niệm.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'Read the text: "The Eiffel Tower is not just a building; it represents the spirit and history of France." \n In this context, the Eiffel Tower is a ________ of France.',
-                options: [
-                    { text: 'Symbol', isCorrect: true },
-                    { text: 'Custom', isCorrect: false },
-                    { text: 'Value', isCorrect: false },
-                    { text: 'Generation', isCorrect: false }
-                ],
-                correctAnswer: 'Symbol',
-                explanation: 'Vật đại diện cho một quốc gia/tinh thần là biểu tượng (Symbol).',
-                level: 'A2', topicId: cultureTopic._id
+                questionText: 'We are going ________ tomorrow to see the old temples and museums.',
+                options: [{ text: 'Sightseeing', isCorrect: true }, { text: 'Booking', isCorrect: false }, { text: 'Luggage', isCorrect: false }, { text: 'Passport', isCorrect: false }],
+                correctAnswer: 'Sightseeing', explanation: 'Go sightseeing là đi ngắm cảnh/tham quan.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'Read the text: "In Bedouin culture, guests are treated with extreme kindness. They are often given the best food and a safe place to rest for three days." \n This behavior shows great:',
-                options: [
-                    { text: 'Hospitality', isCorrect: true },
-                    { text: 'Heritage', isCorrect: false },
-                    { text: 'Ceremony', isCorrect: false },
-                    { text: 'Diverse', isCorrect: false }
-                ],
-                correctAnswer: 'Hospitality',
-                explanation: 'Sự tử tế nồng hậu với khách là hiếu khách (Hospitality).',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Bus, train, and plane are different types of ________.',
+                options: [{ text: 'Accommodation', isCorrect: false }, { text: 'Transport', isCorrect: true }, { text: 'Destination', isCorrect: false }, { text: 'Souvenir', isCorrect: false }],
+                correctAnswer: 'Transport', explanation: 'Transport là phương tiện giao thông.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'Old buildings, monuments, and traditional dances that are protected for the future are part of a country\'s:',
-                options: [
-                    { text: 'Heritage', isCorrect: true },
-                    { text: 'Values', isCorrect: false },
-                    { text: 'Greetings', isCorrect: false },
-                    { text: 'Etiquette', isCorrect: false }
-                ],
-                correctAnswer: 'Heritage',
-                explanation: 'Các công trình và giá trị từ quá khứ được bảo tồn là di sản (Heritage).',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Our ________ to the forest was a real adventure.',
+                options: [{ text: 'Journey', isCorrect: true }, { text: 'Passport', isCorrect: false }, { text: 'Luggage', isCorrect: false }, { text: 'Accommodation', isCorrect: false }],
+                correctAnswer: 'Journey', explanation: 'Journey là một hành trình/chuyến đi.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'A wedding is a formal ________ where two people are legally and socially joined together.',
-                options: [
-                    { text: 'Ceremony', isCorrect: true },
-                    { text: 'Belief', isCorrect: false },
-                    { text: 'Symbol', isCorrect: false },
-                    { text: 'Diverse', isCorrect: false }
-                ],
-                correctAnswer: 'Ceremony',
-                explanation: 'Đám cưới là một nghi lễ (Ceremony).',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'We should look at the ________ to know what we will do each day.',
+                options: [{ text: 'Passport', isCorrect: false }, { text: 'Souvenir', isCorrect: false }, { text: 'Itinerary', isCorrect: true }, { text: 'Luggage', isCorrect: false }],
+                correctAnswer: 'Itinerary', explanation: 'Itinerary là lịch trình chi tiết.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'Read the text: "My grandfather taught me to always be honest and work hard. These are the things my family thinks are most important." \n These important ideas are called:',
-                options: [
-                    { text: 'Values', isCorrect: true },
-                    { text: 'Costumes', isCorrect: false },
-                    { text: 'Festivals', isCorrect: false },
-                    { text: 'Heritages', isCorrect: false }
-                ],
-                correctAnswer: 'Values',
-                explanation: 'Những quan niệm sống quan trọng là giá trị đạo đức (Values).',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'The hotel we stayed in was a very comfortable ________.',
+                options: [{ text: 'Accommodation', isCorrect: true }, { text: 'Destination', isCorrect: false }, { text: 'Transport', isCorrect: false }, { text: 'Flight', isCorrect: false }],
+                correctAnswer: 'Accommodation', explanation: 'Accommodation là chỗ ở (khách sạn, nhà nghỉ...).',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'Read the text: "In some cultures, people believe that hanging a dreamcatcher above the bed will protect them from bad dreams." \n This is an example of a cultural:',
-                options: [
-                    { text: 'Belief', isCorrect: true },
-                    { text: 'Custom', isCorrect: false },
-                    { text: 'Etiquette', isCorrect: false },
-                    { text: 'Greeting', isCorrect: false }
-                ],
-                correctAnswer: 'Belief',
-                explanation: 'Tin vào tác dụng của vật phẩm tâm linh là một niềm tin (Belief).',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'I want to ________ the island and find hidden beaches.',
+                options: [{ text: 'Explore', isCorrect: true }, { text: 'Book', isCorrect: false }, { text: 'Luggage', isCorrect: false }, { text: 'Relax', isCorrect: false }],
+                correctAnswer: 'Explore', explanation: 'Explore nghĩa là khám phá.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'When you say "Hello" or "Namaste" to someone, you are giving them a:',
-                options: [
-                    { text: 'Greeting', isCorrect: true },
-                    { text: 'Tradition', isCorrect: false },
-                    { text: 'Ceremony', isCorrect: false },
-                    { text: 'Festival', isCorrect: false }
-                ],
-                correctAnswer: 'Greeting',
-                explanation: 'Chào hỏi là Greeting.',
-                level: 'A2', topicId: cultureTopic._id
+                questionText: 'My ________ to London leaves at 8 PM from Gate 5.',
+                options: [{ text: 'Flight', isCorrect: true }, { text: 'Souvenir', isCorrect: false }, { text: 'Transport', isCorrect: false }, { text: 'Accommodation', isCorrect: false }],
+                correctAnswer: 'Flight', explanation: 'Flight là chuyến bay.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'Read the text: "Our town has held the same parade on the first of May for over 300 years. It has never changed." \n This event is a long-standing:',
-                options: [
-                    { text: 'Tradition', isCorrect: true },
-                    { text: 'Etiquette', isCorrect: false },
-                    { text: 'Symbol', isCorrect: false },
-                    { text: 'Value', isCorrect: false }
-                ],
-                correctAnswer: 'Tradition',
-                explanation: 'Sự kiện lặp lại suốt 300 năm là truyền thống (Tradition).',
-                level: 'A2', topicId: cultureTopic._id
+                questionText: 'After a long year of work, I just want to ________ on a beach.',
+                options: [{ text: 'Explore', isCorrect: false }, { text: 'Relax', isCorrect: true }, { text: 'Luggage', isCorrect: false }, { text: 'Destination', isCorrect: false }],
+                correctAnswer: 'Relax', explanation: 'Relax nghĩa là thư giãn.',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'multiple_choice',
-                questionText: 'In a family, the grandparents, the parents, and the children represent three different:',
-                options: [
-                    { text: 'Generations', isCorrect: true },
-                    { text: 'Costumes', isCorrect: false },
-                    { text: 'Festivals', isCorrect: false },
-                    { text: 'Symbols', isCorrect: false }
-                ],
-                correctAnswer: 'Generations',
-                explanation: 'Ông bà, cha mẹ, con cái là các thế hệ (Generations).',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'The ________ was very excited to see the Pyramids for the first time.',
+                options: [{ text: 'Tourist', isCorrect: true }, { text: 'Passport', isCorrect: false }, { text: 'Accommodation', isCorrect: false }, { text: 'Transport', isCorrect: false }],
+                correctAnswer: 'Tourist', explanation: 'Tourist là khách du lịch.',
+                level: 'A2', topicId: travelTopic._id
             },
 
-            // ==================== CLOZE TEST (5 bài) ====================
-            // ==================== READING - CLOZE TEST (5 bài - Có list từ xáo trộn) ====================
+            // ==================== READING - CLOZE TEST & FILL BLANK (Gộp 10 bài) ====================
+            // (Cloze Test: 5 bài xáo trộn từ)
             {
                 skill: 'reading', type: 'cloze_test',
-                questionText: 'Words: [generations, celebrate, tradition]. \n Our family has a long [1] of cooking together. We [2] every holiday this way, passing recipes through many [3].',
-                correctAnswer: 'tradition/celebrate/generations',
-                options: [], explanation: 'Truyền thống -> Ăn mừng -> Các thế hệ.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Words: [luggage, flight, destination]. \n I am at the airport. I have my [1], but it is very heavy. My [2] is at 10 AM. I am going to London, my favorite [3].',
+                correctAnswer: 'luggage/flight/destination',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'cloze_test',
-                questionText: 'Words: [respect, diverse, values]. \n In a [1] society, people have different beliefs. However, we should all share the same [2] of showing [3] to everyone.',
-                correctAnswer: 'diverse/values/respect',
-                options: [], explanation: 'Đa dạng -> Giá trị -> Tôn trọng.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Words: [famous, souvenirs, sightseeing]. \n We are in New York. We will go [1] to see the Statue of Liberty. It is very [2]. Later, we will buy some [3] to take home.',
+                correctAnswer: 'sightseeing/famous/souvenirs',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'cloze_test',
-                questionText: 'Words: [costume, festival, custom]. \n During the spring [1], it is a local [2] to wear a colorful [3] made of silk.',
-                correctAnswer: 'festival/custom/costume',
-                options: [], explanation: 'Lễ hội -> Phong tục -> Trang phục.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Words: [accommodation, book, itinerary]. \n I need to [1] a room for our [2] in Paris. I also have an [3] to plan our visits to the museums.',
+                correctAnswer: 'book/accommodation/itinerary',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'cloze_test',
-                questionText: 'Words: [greeting, hospitality, etiquette]. \n Good [1] starts with a warm [2]. In our culture, showing [3] means making guests feel at home.',
-                correctAnswer: 'etiquette/greeting/hospitality',
-                options: [], explanation: 'Phép lịch sự -> Lời chào -> Sự hiếu khách.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Words: [explore, relax, transport]. \n During our holiday, we want to [1] the mountains. We will use a bus for [2]. At the end of the day, we just want to [3].',
+                correctAnswer: 'explore/transport/relax',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'reading', type: 'cloze_test',
-                questionText: 'Words: [belief, heritage, symbol]. \n This temple is a [1] of our national [2]. It represents our deep [3] in peace.',
-                correctAnswer: 'symbol/heritage/belief',
-                options: [], explanation: 'Biểu tượng -> Di sản -> Niềm tin.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Words: [passport, tourist, adventure]. \n Every [1] needs a [2] to travel abroad. Going to the jungle is a big [3] for us.',
+                correctAnswer: 'tourist/passport/adventure',
+                level: 'A2', topicId: travelTopic._id
+            },
+            // (Fill in the Blank: 5 bài định nghĩa)
+            {
+                skill: 'reading', type: 'fill_in_blank',
+                questionText: 'A journey that is exciting and sometimes dangerous is an [1].',
+                correctAnswer: 'adventure',
+                level: 'A2', topicId: travelTopic._id
+            },
+            {
+                skill: 'reading', type: 'fill_in_blank',
+                questionText: 'The place where you are going is your [1].',
+                correctAnswer: 'destination',
+                level: 'A2', topicId: travelTopic._id
+            },
+            {
+                skill: 'reading', type: 'fill_in_blank',
+                questionText: 'A plane, a car, or a bike are all types of [1].',
+                correctAnswer: 'transport',
+                level: 'A2', topicId: travelTopic._id
+            },
+            {
+                skill: 'reading', type: 'fill_in_blank',
+                questionText: 'To go and see famous places in a city is to go [1].',
+                correctAnswer: 'sightseeing',
+                level: 'A2', topicId: travelTopic._id
+            },
+            {
+                skill: 'reading', type: 'fill_in_blank',
+                questionText: 'A small thing you buy to remember your holiday is a [1].',
+                correctAnswer: 'souvenir',
+                level: 'A2', topicId: travelTopic._id
             },
 
-            // ==================== READING - FILL IN BLANK (5 bài) ====================
-            {
-                skill: 'reading', type: 'fill_in_blank',
-                questionText: 'The formal rules for polite behavior in a particular group or situation are called [1].',
-                correctAnswer: 'etiquette',
-                options: [], explanation: 'Định nghĩa của phép lịch sự.',
-                level: 'B1', topicId: cultureTopic._id
-            },
-            {
-                skill: 'reading', type: 'fill_in_blank',
-                questionText: 'A person who is very friendly and welcomes guests with food and drink is showing [1].',
-                correctAnswer: 'hospitality',
-                options: [], explanation: 'Định nghĩa của lòng hiếu khách.',
-                level: 'B1', topicId: cultureTopic._id
-            },
-            {
-                skill: 'reading', type: 'fill_in_blank',
-                questionText: 'If a culture includes many different types of people, languages, and ideas, it is [1].',
-                correctAnswer: 'diverse',
-                options: [], explanation: 'Định nghĩa của sự đa dạng.',
-                level: 'B1', topicId: cultureTopic._id
-            },
-            {
-                skill: 'reading', type: 'fill_in_blank',
-                questionText: 'A pattern or an object that represents a particular country or an idea is a [1].',
-                correctAnswer: 'symbol',
-                options: [], explanation: 'Định nghĩa của biểu tượng.',
-                level: 'A2', topicId: cultureTopic._id
-            },
-            {
-                skill: 'reading', type: 'fill_in_blank',
-                questionText: 'The history, traditions, and buildings that a country has had for many years are its [1].',
-                correctAnswer: 'heritage',
-                options: [], explanation: 'Định nghĩa của di sản.',
-                level: 'B1', topicId: cultureTopic._id
-            },
-
-            // ==================== LISTENING - CLOZE TEST (5 bài - Không có list từ) ====================
+            // ==================== LISTENING - CLOZE TEST & FILL BLANK (Gộp 10 bài) ====================
+            // (Listening Cloze: 5 bài không list từ)
             {
                 skill: 'listening', type: 'cloze_test',
-                questionText: 'Listen and fill in the missing words: \n "We must show [1] to the older [2] because they teach us our important [3]."',
-                audioUrl: 'We must show respect to the older generations because they teach us our important values.',
-                correctAnswer: 'respect/generations/values',
-                options: [], explanation: 'Nghe và điền: tôn trọng, thế hệ, giá trị.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Listen and fill: "I need to check my [1] to see the time of our [2]."',
+                audioUrl: 'I need to check my itinerary to see the time of our flight.',
+                correctAnswer: 'itinerary/flight',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'listening', type: 'cloze_test',
-                questionText: 'Listen and fill in the missing words: \n "Every year, we [1] the harvest [2]. Everyone wears a traditional [3]."',
-                audioUrl: 'Every year, we celebrate the harvest festival. Everyone wears a traditional costume.',
-                correctAnswer: 'celebrate/festival/costume',
-                options: [], explanation: 'Nghe và điền: ăn mừng, lễ hội, trang phục.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Listen and fill: "The [1] was very kind at the hotel [2]."',
+                audioUrl: 'The tourist was very kind at the hotel accommodation.',
+                correctAnswer: 'tourist/accommodation',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'listening', type: 'cloze_test',
-                questionText: 'Listen and fill in the missing words: \n "A bow is a formal [1]. It is a [2] that follows our social [3]."',
-                audioUrl: 'A bow is a formal greeting. It is a custom that follows our social etiquette.',
-                correctAnswer: 'greeting/custom/etiquette',
-                options: [], explanation: 'Nghe và điền: lời chào, phong tục, phép lịch sự.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Listen and fill: "Don’t forget your [1] and your heavy [2]."',
+                audioUrl: 'Don’t forget your passport and your heavy luggage.',
+                correctAnswer: 'passport/luggage',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'listening', type: 'cloze_test',
-                questionText: 'Listen and fill in the missing words: \n "In this [1] city, people show great [2] despite having different [3]."',
-                audioUrl: 'In this diverse city, people show great hospitality despite having different beliefs.',
-                correctAnswer: 'diverse/hospitality/beliefs',
-                options: [], explanation: 'Nghe và điền: đa dạng, hiếu khách, niềm tin.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Listen and fill: "We will [1] the city and buy some [2]."',
+                audioUrl: 'We will explore the city and buy some souvenirs.',
+                correctAnswer: 'explore/souvenirs',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'listening', type: 'cloze_test',
-                questionText: 'Listen and fill in the missing words: \n "The [1] was a long [2] that included many ancient [3]."',
-                audioUrl: 'The ceremony was a long tradition that included many ancient symbols.',
-                correctAnswer: 'ceremony/tradition/symbols',
-                options: [], explanation: 'Nghe và điền: nghi lễ, truyền thống, biểu tượng.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'Listen and fill: "This place is [1] and very good to [2]."',
+                audioUrl: 'This place is famous and very good to relax.',
+                correctAnswer: 'famous/relax',
+                level: 'A2', topicId: travelTopic._id
             },
-
-            // ==================== LISTENING - FILL IN BLANK (5 bài) ====================
+            // (Listening Fill Blank: 5 bài nghe trực tiếp)
             {
                 skill: 'listening', type: 'fill_in_blank',
-                questionText: 'Identify the cultural concept: [1].',
-                audioUrl: 'This secret recipe has been passed down from my great-grandmother to my mother, and now to me.',
-                correctAnswer: 'tradition',
-                options: [], explanation: 'Việc truyền lại qua nhiều đời là truyền thống.',
-                level: 'A2', topicId: cultureTopic._id
+                questionText: 'What does the man want to do? [1].',
+                audioUrl: 'I want to book a room for two nights, please.',
+                correctAnswer: 'book',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'listening', type: 'fill_in_blank',
-                questionText: 'What are the children learning? [1].',
-                audioUrl: 'The children are learning how to be polite and how to act correctly at a formal dinner table.',
-                correctAnswer: 'etiquette',
-                options: [], explanation: 'Cách hành xử lịch sự trên bàn ăn là etiquette.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'What is the woman talking about? [1].',
+                audioUrl: 'My journey by train was very long.',
+                correctAnswer: 'journey',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'listening', type: 'fill_in_blank',
-                questionText: 'The Great Wall is part of the world\'s cultural [1].',
-                audioUrl: 'We are visiting the Great Wall today. It is a very important part of the world\'s cultural heritage.',
-                correctAnswer: 'heritage',
-                options: [], explanation: 'Di sản văn hóa thế giới.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'What activity is mentioned? [1].',
+                audioUrl: 'Tomorrow morning, we will go sightseeing.',
+                correctAnswer: 'sightseeing',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'listening', type: 'fill_in_blank',
-                questionText: 'The speaker describes the dove as a [1] of peace.',
-                audioUrl: 'In many parts of the world, people recognize the dove as a symbol of peace.',
-                correctAnswer: 'symbol',
-                options: [], explanation: 'Biểu tượng của hòa bình.',
-                level: 'A2', topicId: cultureTopic._id
+                questionText: 'What is the destination? [1].',
+                audioUrl: 'London is our final destination for this trip.',
+                correctAnswer: 'destination',
+                level: 'A2', topicId: travelTopic._id
             },
             {
                 skill: 'listening', type: 'fill_in_blank',
-                questionText: 'The villagers are known for their [1].',
-                audioUrl: 'Even though the villagers didn\'t know the travelers, they shared their food and home. They are known for their hospitality.',
-                correctAnswer: 'hospitality',
-                options: [], explanation: 'Sự hiếu khách của dân làng.',
-                level: 'B1', topicId: cultureTopic._id
+                questionText: 'What is the exciting trip called? An [1].',
+                audioUrl: 'Hiking in the mountains was a great adventure.',
+                correctAnswer: 'adventure',
+                level: 'A2', topicId: travelTopic._id
             }
         ];
 

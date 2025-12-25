@@ -119,14 +119,46 @@ const deleteTopic = async (topicId) => {
     return { message: 'Đã xóa chủ đề và toàn bộ dữ liệu liên quan thành công' };
 };
 
-const getTopicsWithProgress = async (userId) => {
-    // 1. Lấy tất cả topic
-    const topics = await Topic.find({}).lean();
-    if (!topics.length) return [];
+const getTopicsWithProgress = async (userId, filters = {}) => {
+    const { page, limit, sortBy = 'order', sortOrder = 'asc' } = filters;
 
-    const topicIds = topics.map(t => t._id);
+    const sortOrderNum = sortOrder === 'asc' ? 1 : -1;
 
-    const topicsWithData = await Promise.all(topics.map(async (topic) => {
+    // Đếm tổng số topics
+    const total = await Topic.countDocuments({});
+
+    // Build query
+    let query = Topic.find({}).sort({ [sortBy]: sortOrderNum });
+
+    // PAGINATION: Chỉ apply nếu có page hoặc limit
+    let pageNum = 1;
+    let limitNum = total; // Mặc định lấy tất cả
+
+    if (page || limit) {
+        pageNum = parseInt(page) || 1;
+        limitNum = parseInt(limit) || 6;
+        const skip = (pageNum - 1) * limitNum;
+        query = query.skip(skip).limit(limitNum);
+    }
+
+    const topics = await query.lean();
+
+    if (!topics.length) {
+        // Nếu có pagination, trả về format có metadata
+        if (page || limit) {
+            return {
+                total,
+                page: pageNum,
+                limit: limitNum,
+                totalPages: Math.ceil(total / limitNum),
+                data: []
+            };
+        }
+        return [];
+    }
+
+    // HELPER FUNCTION: Tính progress cho 1 topic
+    const calculateTopicProgress = async (topic) => {
         const topicId = topic._id;
 
         // Đếm tổng từ trong Topic này
@@ -137,7 +169,7 @@ const getTopicsWithProgress = async (userId) => {
             status: 'memorized'
         }).populate({
             path: 'vocabulary',
-            match: { topic: topicId } // Chỉ lấy những từ thuộc topic này
+            match: { topic: topicId }
         });
 
         const learnedWords = learnedDocs.filter(doc => doc.vocabulary).length;
@@ -154,8 +186,23 @@ const getTopicsWithProgress = async (userId) => {
             learnedWords,
             progress
         };
-    }));
+    };
 
+    // Tính progress cho tất cả topics
+    const topicsWithData = await Promise.all(topics.map(calculateTopicProgress));
+
+    // Nếu có pagination, trả về format có metadata
+    if (page || limit) {
+        return {
+            total,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum),
+            data: topicsWithData
+        };
+    }
+
+    // Không có pagination, trả về array thuần
     return topicsWithData;
 };
 

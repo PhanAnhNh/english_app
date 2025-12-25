@@ -8,7 +8,7 @@ const url = require('url');
  * @returns {Promise<{pronunciation: string, example: string, audioUrl: string, type: string}>}
  */
 async function fetchWordData(word) {
-    const targetUrl = `https://dictionary.cambridge.org/vi/dictionary/english/${encodeURIComponent(word)}`;
+    const targetUrl = `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(word)}`;
     try {
         const { data } = await axios.get(targetUrl, {
             headers: {
@@ -55,7 +55,7 @@ async function fetchWordData(word) {
  */
 async function fetchImageUrl(word) {
     // Thêm tham số tbs=iar:w (Wide aspect ratio) và isz:l (Large size)
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(word)}+cartoon+images+freepik&tbm=isch&tbs=iar:w,isz:l`;
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(word)}+cartoon+images&tbm=isch&tbs=iar:w,isz:l`;
     try {
         const { data } = await axios.get(searchUrl, {
             headers: {
