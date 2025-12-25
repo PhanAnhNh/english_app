@@ -52,10 +52,20 @@ const deleteVocabulary = async (req, res) => {
     }
 };
 
+const getVocabularyTypes = async (req, res) => {
+    try {
+        const types = await vocabularyService.getDistinctTypes();
+        res.json({ types });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
 module.exports = {
     getVocabularies,
     getVocabularyById,
     createVocabulary,
     updateVocabulary,
-    deleteVocabulary
+    deleteVocabulary,
+    getVocabularyTypes
 };

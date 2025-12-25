@@ -167,11 +167,30 @@ const deleteVocabulary = async (vocabId) => {
     return { message: 'Đã xóa thành công' };
 };
 
+const getDistinctTypes = async () => {
+    try {
+        // Lấy tất cả các giá trị type duy nhất từ collection
+        const types = await Vocabulary.distinct('type');
+
+        // Lọc bỏ giá trị null, undefined, empty string
+        const validTypes = types.filter(type => type && type.trim() !== '');
+
+        // Sắp xếp theo alphabet
+        validTypes.sort();
+
+        return validTypes;
+    } catch (error) {
+        console.error("💥 ERROR in getDistinctTypes:", error);
+        throw new Error(`Failed to get distinct types: ${error.message}`);
+    }
+};
+
 module.exports = {
     getVocabularies,
     getVocabularyById,
     createVocabulary,
     updateVocabulary,
-    deleteVocabulary
+    deleteVocabulary,
+    getDistinctTypes
 };
 
