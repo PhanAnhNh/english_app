@@ -45,6 +45,7 @@ const grammarExerciseRoutes = require('./routes/grammarExerciseRoutes');
 const landingPageRoutes = require('./routes/landingPageRoutes');
 const listeningRoutes = require('./routes/listeningRouter');
 const aiRoutes = require('./routes/aiRoutes');
+const ttsRoutes = require('./routes/ttsRoutes');
 
 
 // Sử dụng routes
@@ -65,6 +66,7 @@ app.use('/api', grammarExerciseRoutes);
 app.use('/api/landing-page', landingPageRoutes);
 app.use('/api/listenings', listeningRoutes);
 app.use('/api', aiRoutes);
+app.use('/api/tts', ttsRoutes);
 
 // 404 Handler
 app.use((req, res) => res.status(404).json({ message: 'API Endpoint không tồn tại' }));

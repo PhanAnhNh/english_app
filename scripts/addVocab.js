@@ -11,7 +11,7 @@ const addFamilyVocab = async () => {
         console.log('✅ Connected to MongoDB');
 
         // 1. Find the Family Topic
-        const topicName = "Colors";
+        const topicName = "Globalization & Social Integration";
         const topic = await Topic.findOne({
             name: { $regex: new RegExp(`^${topicName}$`, 'i') }
         });
@@ -26,34 +26,34 @@ const addFamilyVocab = async () => {
         // Excluded: family, mother, father, parent, brother, sister, grandmother, grandfather, baby, child, son, daughter, aunt, uncle, cousin, grandparent
         const newVocabs = [
             // A1
-            { word: 'silver', meaning: 'màu bạc', level: 'A1', type: 'adjective', topic: topic._id, example: 'She wore a beautiful silver ring.' },
-            { word: 'gold', meaning: 'màu vàng kim', level: 'A1', type: 'adjective', topic: topic._id, example: 'The Olympic winner got a gold medal.' },
-            { word: 'rainbow', meaning: 'cầu vồng', level: 'A1', type: 'noun', topic: topic._id, example: 'Look at the colorful rainbow in the sky!' },
+            { word: 'world', meaning: 'thế giới', level: 'A1', type: 'noun', topic: topic._id, example: 'We live in a big world.' },
+            { word: 'internet', meaning: 'mạng internet', level: 'A1', type: 'noun', topic: topic._id, example: 'The internet connects people everywhere.' },
+            { word: 'travel', meaning: 'du hành', level: 'A1', type: 'verb', topic: topic._id, example: 'Many people travel to different countries.' },
 
             // A2
-            { word: 'blonde', meaning: 'vàng hoe (tóc)', level: 'A2', type: 'adjective', topic: topic._id, example: 'The little girl has long blonde hair.' },
-            { word: 'navy', meaning: 'xanh đen', level: 'A2', type: 'adjective', topic: topic._id, example: 'His school uniform is navy blue.' },
-            { word: 'cream', meaning: 'màu kem', level: 'A2', type: 'adjective', topic: topic._id, example: 'The walls were painted a soft cream color.' },
+            { word: 'global', meaning: 'toàn cầu', level: 'A2', type: 'adjective', topic: topic._id, example: 'Climate change is a global problem.' },
+            { word: 'connect', meaning: 'kết nối', level: 'A2', type: 'verb', topic: topic._id, example: 'Social media helps us connect with friends.' },
+            { word: 'culture', meaning: 'văn hóa', level: 'A2', type: 'noun', topic: topic._id, example: 'I enjoy learning about Japanese culture.' },
 
             // B1
-            { word: 'shade', meaning: 'sắc thái màu', level: 'B1', type: 'noun', topic: topic._id, example: 'There are many different shades of green in the forest.' },
-            { word: 'pale', meaning: 'nhợt nhạt', level: 'B1', type: 'adjective', topic: topic._id, example: 'She looked a bit pale after the long flight.' },
-            { word: 'vivid', meaning: 'sặc sỡ', level: 'B1', type: 'adjective', topic: topic._id, example: 'The artist uses vivid colors in his paintings.' },
+            { word: 'international', meaning: 'quốc tế', level: 'B1', type: 'adjective', topic: topic._id, example: 'They work for a large international company.' },
+            { word: 'trade', meaning: 'thương mại', level: 'B1', type: 'noun', topic: topic._id, example: 'Free trade can help the economy grow.' },
+            { word: 'support', meaning: 'hỗ trợ', level: 'B1', type: 'verb', topic: topic._id, example: 'The community helps to support new immigrants.' },
 
             // B2
-            { word: 'neutral', meaning: 'trung tính', level: 'B2', type: 'adjective', topic: topic._id, example: 'She prefers neutral colors like beige for her home.' },
-            { word: 'transparent', meaning: 'trong suốt', level: 'B2', type: 'adjective', topic: topic._id, example: 'The water in the lake was so transparent.' },
-            { word: 'pastel', meaning: 'màu phấn nhạt', level: 'B2', type: 'adjective', topic: topic._id, example: 'The baby\'s room was decorated in pastel colors.' },
+            { word: 'cooperation', meaning: 'sự hợp tác', level: 'B2', type: 'noun', topic: topic._id, example: 'Economic cooperation between nations is increasing.' },
+            { word: 'boundary', meaning: 'biên giới', level: 'B2', type: 'noun', topic: topic._id, example: 'In a digital age, information has no boundaries.' },
+            { word: 'diverse', meaning: 'đa dạng', level: 'B2', type: 'adjective', topic: topic._id, example: 'The city has a very diverse population.' },
 
             // C1
-            { word: 'vibrant', meaning: 'rực rỡ', level: 'C1', type: 'adjective', topic: topic._id, example: 'The city is famous for its vibrant street art.' },
-            { word: 'monochrome', meaning: 'đơn sắc', level: 'C1', type: 'adjective', topic: topic._id, example: 'The photographer is known for his monochrome portraits.' },
-            { word: 'fluorescent', meaning: 'huỳnh quang', level: 'C1', type: 'adjective', topic: topic._id, example: 'Cyclists often wear fluorescent jackets for safety.' },
+            { word: 'outsourcing', meaning: 'thuê ngoài', level: 'C1', type: 'noun', topic: topic._id, example: 'Many firms use outsourcing to reduce labor costs.' },
+            { word: 'interact', meaning: 'tương tác', level: 'C1', type: 'verb', topic: topic._id, example: 'The program allows students to interact with peers globally.' },
+            { word: 'connectivity', meaning: 'khả năng kết nối', level: 'C1', type: 'noun', topic: topic._id, example: 'Improved connectivity has boosted international business.' },
 
             // C2
-            { word: 'hue', meaning: 'sắc độ', level: 'C2', type: 'noun', topic: topic._id, example: 'The sunset filled the sky with various orange hues.' },
-            { word: 'iridescent', meaning: 'óng ánh', level: 'C2', type: 'adjective', topic: topic._id, example: 'Soap bubbles have an iridescent surface.' },
-            { word: 'opaque', meaning: 'mờ đục', level: 'C2', type: 'adjective', topic: topic._id, example: 'The windows were painted with an opaque film.' }
+            { word: 'hegemony', meaning: 'quyền bá chủ', level: 'C2', type: 'noun', topic: topic._id, example: 'The cultural hegemony of the West is being challenged.' },
+            { word: 'interdependence', meaning: 'sự phụ thuộc lẫn nhau', level: 'C2', type: 'noun', topic: topic._id, example: 'Globalization has created a deep economic interdependence.' },
+            { word: 'transnational', meaning: 'xuyên quốc gia', level: 'C2', type: 'adjective', topic: topic._id, example: 'Transnational corporations play a huge role in the global economy.' }
         ];
         // 3. Insert items
         const result = await Vocabulary.insertMany(newVocabs);
