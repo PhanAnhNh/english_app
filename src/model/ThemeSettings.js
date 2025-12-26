@@ -10,8 +10,8 @@ const ThemeSettingsSchema = new mongoose.Schema({
     // New granular colors
     footerColor: { type: String, default: '#0f1117' },
     heroHeadlineColor: { type: String, default: '#ffc107' },
-    cardColor: { type: String, default: 'rgba(26, 29, 41, 0.7)' },
-    inputBackgroundColor: { type: String, default: 'rgba(255, 255, 255, 0.05)' },
+    cardColor: { type: String, default: '#1a1d29' },
+    inputBackgroundColor: { type: String, default: '#ffffff' },
     successColor: { type: String, default: '#28a745' },
     errorColor: { type: String, default: '#dc3545' },
 
