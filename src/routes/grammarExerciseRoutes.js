@@ -4,23 +4,19 @@ const grammarExerciseController = require('../controller/grammarExerciseControll
 const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
 
-//Tạo mới một grammerExercise
+// Route tạo bài tập mới (Dành cho Admin)
+router.post('/grammar-exercises/create', authMiddleware, adminMiddleware, grammarExerciseController.createExercise);
 
-router.post('/create', authMiddleware, adminMiddleware, grammarExerciseController.createExercise);
+// Route: GET /api/grammar-exercises?grammarId=...
+router.get('/grammar-exercises', grammarExerciseController.getExercises);
 
-//Lấy tất cả các grammerExercise
+// Route: GET /api/grammar-exercises/:id (Lấy theo grammarId)
+router.get('/grammar-exercises/:id', grammarExerciseController.getExercisesByGrammarId);
 
-router.get('/', grammarExerciseController.getExercises);
+// Route cập nhật bài tập (Dành cho Admin)
+router.put('/grammar-exercises/update/:id', authMiddleware, adminMiddleware, grammarExerciseController.updateExercise);
 
-//Lấy các grammerExercise theo grammarId
-
-router.get('/:id', grammarExerciseController.getExercisesByGrammarId);
-
-//Cập nhật một grammerExercise
-router.put('/update/:id', authMiddleware, adminMiddleware, grammarExerciseController.updateExercise);
-
-//Xóa một grammerExercise
-router.delete('/delete/:id', authMiddleware, adminMiddleware, grammarExerciseController.deleteExercise);
-
+// Route xóa bài tập (Dành cho Admin)
+router.delete('/grammar-exercises/delete/:id', authMiddleware, adminMiddleware, grammarExerciseController.deleteExercise);
 
 module.exports = router;

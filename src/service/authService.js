@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const User = require('../model/User');
 const RefreshToken = require('../model/RefreshToken');
 const { createAccessToken, createRefreshToken } = require('../utils/jwt');
+const emailService = require('./emailService');
 
 const register = async (userData) => {
     const { fullname, username, password, role = 'student', email } = userData;
@@ -61,18 +62,30 @@ const register = async (userData) => {
             username: user.username,
             fullname: user.fullname,
             role: user.role,
-            email: user.email
+            email: user.email,
+            tokenVersion: user.tokenVersion
         },
         accessToken,
         refreshToken
     };
 };
 
-const login = async (username, password, deviceInfo = {}) => {
+const login = async (username, password, deviceInfo = {}, logoutOthers = true) => {
     const user = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
         throw new Error('Sai username hoặc password');
+    }
+
+    // Nếu yêu cầu đăng xuất các thiết bị khác
+    if (logoutOthers) {
+        await RefreshToken.updateMany(
+            { userId: user._id, isRevoked: false },
+            { isRevoked: true }
+        );
+        // Tăng token version để đá máy cũ (Instant Logout)
+        user.tokenVersion = (user.tokenVersion || 0) + 1;
+        await user.save();
     }
 
     // Tạo tokens
@@ -80,7 +93,8 @@ const login = async (username, password, deviceInfo = {}) => {
         id: user._id,
         username: user.username,
         fullname: user.fullname,
-        role: user.role
+        role: user.role,
+        tokenVersion: user.tokenVersion // Gắn version vào token
     });
 
     const refreshToken = createRefreshToken({
@@ -109,23 +123,30 @@ const login = async (username, password, deviceInfo = {}) => {
             id: user._id,
             username: user.username,
             fullname: user.fullname,
-            role: user.role
+            role: user.role,
+            tokenVersion: user.tokenVersion
         },
         accessToken,
         refreshToken
     };
 };
 
-const adminLogin = async (username, password, deviceInfo = {}) => {
+const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = true) => {
     const user = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
         throw new Error('Sai username hoặc password');
     }
 
-    // Chỉ cho phép admin
-    if (user.role !== 'admin') {
-        throw new Error('Chỉ Admin được phép đăng nhập vào web admin');
+    // Nếu yêu cầu đăng xuất các thiết bị khác
+    if (logoutOthers) {
+        await RefreshToken.updateMany(
+            { userId: user._id, isRevoked: false },
+            { isRevoked: true }
+        );
+        // Tăng token version để đá máy cũ (Instant Logout)
+        user.tokenVersion = (user.tokenVersion || 0) + 1;
+        await user.save();
     }
 
     // Tạo tokens
@@ -133,7 +154,8 @@ const adminLogin = async (username, password, deviceInfo = {}) => {
         id: user._id,
         username: user.username,
         fullname: user.fullname,
-        role: user.role
+        role: user.role,
+        tokenVersion: user.tokenVersion // Gắn version vào token
     });
 
     const refreshToken = createRefreshToken({
@@ -162,7 +184,8 @@ const adminLogin = async (username, password, deviceInfo = {}) => {
             id: user._id,
             username: user.username,
             fullname: user.fullname,
-            role: user.role
+            role: user.role,
+            tokenVersion: user.tokenVersion
         },
         accessToken,
         refreshToken
@@ -207,7 +230,8 @@ const refreshAccessToken = async (refreshTokenString) => {
         id: user._id,
         username: user.username,
         fullname: user.fullname,
-        role: user.role
+        role: user.role,
+        tokenVersion: user.tokenVersion // Cập nhật version mới nhất
     });
 
     return {
@@ -216,7 +240,8 @@ const refreshAccessToken = async (refreshTokenString) => {
             id: user._id,
             username: user.username,
             fullname: user.fullname,
-            role: user.role
+            role: user.role,
+            tokenVersion: user.tokenVersion
         }
     };
 };
@@ -249,6 +274,70 @@ const getMe = async (userId) => {
     return user;
 };
 
+const forgotPassword = async (username) => {
+    const user = await User.findOne({ username });
+    if (!user) {
+        throw new Error('Username không tồn tại trong hệ thống');
+    }
+    if (!user.email) {
+        throw new Error('Tài khoản này chưa đăng ký email, vui lòng liên hệ admin');
+    }
+
+    const email = user.email;
+
+    // Tạo OTP 6 số
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Lưu OTP và thời gian hết hạn (10 phút)
+    user.resetPasswordOtp = otp;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    // Gửi email
+    await emailService.sendOtpEmail(email, otp);
+
+    return { message: 'Mã OTP đã được gửi đến email của bạn' };
+};
+
+const verifyOtp = async (username, otp) => {
+    const user = await User.findOne({
+        username,
+        resetPasswordOtp: otp,
+        resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+        throw new Error('Mã OTP không hợp lệ hoặc đã hết hạn');
+    }
+
+    return { message: 'Xác thực OTP thành công' };
+};
+
+const resetPassword = async (username, otp, newPassword) => {
+    // Verify lại một lần nữa để chắc chắn
+    const user = await User.findOne({
+        username,
+        resetPasswordOtp: otp,
+        resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+        throw new Error('Mã OTP không hợp lệ hoặc đã hết hạn');
+    }
+
+    // Hash password mới
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(newPassword, salt);
+
+    // Cập nhật password và xóa OTP
+    user.passwordHash = hash;
+    user.resetPasswordOtp = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return { message: 'Đặt lại mật khẩu thành công' };
+};
+
 module.exports = {
     register,
     login,
@@ -256,5 +345,8 @@ module.exports = {
     refreshAccessToken,
     revokeRefreshToken,
     revokeAllUserTokens,
-    getMe
+    getMe,
+    forgotPassword,
+    verifyOtp,
+    resetPassword
 };

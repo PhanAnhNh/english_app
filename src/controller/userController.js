@@ -70,7 +70,7 @@ const getUsersStats = async (req, res) => {
 
 const updateProfile = async (req, res) => {
     try {
-        const result = await userService.updateProfile(req.user.id, req.body);
+        const result = await userService.updateProfile(req.user.id, req.body, req.files);
         res.json(result);
     } catch (e) {
         res.status(500).json({ error: e.message });

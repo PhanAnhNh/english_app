@@ -13,6 +13,12 @@ const UserSchema = new mongoose.Schema({
     xp: { type: Number, default: 0 },
     gems: { type: Number, default: 0 },
 
+    // Password Reset
+    resetPasswordOtp: { type: String },
+    resetPasswordExpires: { type: Date },
+
+    tokenVersion: { type: Number, default: 0 },
+
     createdAt: { type: Date, default: Date.now }
 });
 

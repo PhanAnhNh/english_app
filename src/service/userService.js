@@ -48,7 +48,7 @@ const addUser = async (userData, adminId) => {
 };
 
 const getUsers = async (filters) => {
-    const { page = 1, limit = 10, role, search, level } = filters;
+    const { page = 1, limit, role, search, level } = filters;
 
     // Tạo bộ lọc
     let filter = {};
@@ -62,20 +62,25 @@ const getUsers = async (filters) => {
         ];
     }
 
-    const skip = (page - 1) * limit;
     const total = await User.countDocuments(filter);
-
-    const users = await User.find(filter)
+    let query = User.find(filter)
         .select('-passwordHash')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
+        .sort({ createdAt: -1 });
+
+    if (limit && !isNaN(parseInt(limit))) {
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+        query = query.skip(skip).limit(limitNum);
+    }
+
+    const users = await query;
 
     return {
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        page: parseInt(page) || 1,
+        limit: limit ? parseInt(limit) : total,
+        totalPages: limit ? Math.ceil(total / parseInt(limit)) : 1,
         data: users
     };
 };
@@ -222,6 +227,11 @@ const getUsersStats = async () => {
 const updateProfile = async (userId, profileData) => {
     const { fullname, email, level, avatarUrl } = profileData;
 
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new Error('Không tìm thấy người dùng');
+    }
+
     // Chỉ cho phép update các field không nhạy cảm
     const updateData = {
         ...(fullname && { fullname }),
@@ -229,6 +239,9 @@ const updateProfile = async (userId, profileData) => {
         ...(level && { level }),
         ...(avatarUrl && { avatarUrl })
     };
+
+    // Upload avatar mới nếu có
+
 
     const updatedUser = await User.findByIdAndUpdate(
         userId,

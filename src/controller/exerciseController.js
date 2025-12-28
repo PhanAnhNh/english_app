@@ -20,7 +20,7 @@ const getExerciseById = async (req, res) => {
 
 const createExercise = async (req, res) => {
     try {
-        const item = await exerciseService.createExercise(req.body);
+        const item = await exerciseService.createExercise(req.body, req.files);
         res.json(item);
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -29,7 +29,7 @@ const createExercise = async (req, res) => {
 
 const updateExercise = async (req, res) => {
     try {
-        const updated = await exerciseService.updateExercise(req.params.id, req.body);
+        const updated = await exerciseService.updateExercise(req.params.id, req.body, req.files);
         res.json(updated);
     } catch (e) {
         res.status(500).json({ error: e.message });

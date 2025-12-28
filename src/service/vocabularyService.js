@@ -1,15 +1,18 @@
 const Vocabulary = require('../model/Vocabulary');
+const Topic = require('../model/Topic');
 const AdminLog = require('../model/AdminLog');
 const UserVocabulary = require('../model/UserVocabulary');
-const Topic = require('../model/Topic');
-const mongoose = require('mongoose'); // <-- THÊM DÒNG NÀY!
+const mongoose = require('mongoose');
 
 const getVocabularies = async (filters) => {
     try {
         const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', level, topic, search } = filters;
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit) || 10;
+        const skip = (pageNum - 1) * limitNum;
 
         console.log("🚀 ========== GET VOCABULARIES CALLED ==========");
-        console.log("📦 Query params:", { topic, level, search });
+        console.log("📦 Query params:", { topic, level, search, page: pageNum, limit: limitNum });
 
         // Tạo bộ lọc
         let filter = {};
@@ -52,8 +55,24 @@ const getVocabularies = async (filters) => {
 
         console.log("🎯 Final filter for query:", JSON.stringify(filter, null, 2));
 
-        // THỰC HIỆN QUERY
-        const data = await Vocabulary.find(filter).populate('topic', 'name');
+        // Get Total Count first
+        const total = await Vocabulary.countDocuments(filter);
+
+        // Build Query
+        let query = Vocabulary.find(filter)
+            .populate('topic', 'name')
+            .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 });
+
+        // Apply Pagination ONLY if limit is provided and valid
+        if (limit && !isNaN(parseInt(limit))) {
+            const pageNum = parseInt(page) || 1;
+            const limitNum = parseInt(limit);
+            const skip = (pageNum - 1) * limitNum;
+            query = query.skip(skip).limit(limitNum);
+        }
+
+        const data = await query;
+
         console.log("✅ Query executed successfully");
         console.log("📊 Number of vocabularies found:", data.length);
 
@@ -79,10 +98,10 @@ const getVocabularies = async (filters) => {
         }
 
         return {
-            total: data.length,
-            page: parseInt(page),
-            limit: parseInt(limit) || data.length,
-            totalPages: Math.ceil(data.length / (parseInt(limit) || 1)),
+            total: total,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum),
             data
         };
 
@@ -136,8 +155,34 @@ const updateVocabulary = async (vocabId, vocabData) => {
 };
 
 const deleteVocabulary = async (vocabId) => {
+    const vocabulary = await Vocabulary.findById(vocabId);
+    if (!vocabulary) {
+        throw new Error('Không tìm thấy từ vựng');
+    }
+
+    // Xóa files trên Cloudinary
+
+
     await Vocabulary.findByIdAndDelete(vocabId);
     return { message: 'Đã xóa thành công' };
+};
+
+const getDistinctTypes = async () => {
+    try {
+        // Lấy tất cả các giá trị type duy nhất từ collection
+        const types = await Vocabulary.distinct('type');
+
+        // Lọc bỏ giá trị null, undefined, empty string
+        const validTypes = types.filter(type => type && type.trim() !== '');
+
+        // Sắp xếp theo alphabet
+        validTypes.sort();
+
+        return validTypes;
+    } catch (error) {
+        console.error("💥 ERROR in getDistinctTypes:", error);
+        throw new Error(`Failed to get distinct types: ${error.message}`);
+    }
 };
 
 module.exports = {
@@ -145,6 +190,7 @@ module.exports = {
     getVocabularyById,
     createVocabulary,
     updateVocabulary,
-    deleteVocabulary
+    deleteVocabulary,
+    getDistinctTypes
 };
 

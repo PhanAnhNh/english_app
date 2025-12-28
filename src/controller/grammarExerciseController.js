@@ -1,19 +1,70 @@
 const GrammarExercise = require('../model/GrammarExercise');
+const Grammar = require('../model/Grammar');
+const mongoose = require('mongoose');
 
 exports.getExercises = async (req, res) => {
     try {
-        const { grammarId } = req.query;
+        const { grammarId, grammarCategoryId, random, limit, page, search } = req.query;
         const filter = { isActive: true };
 
         if (grammarId) {
-            filter.grammarId = grammarId;
+            filter.grammarId = new mongoose.Types.ObjectId(grammarId);
+        } else if (grammarCategoryId) {
+            // Find all grammars in this category
+            const grammars = await Grammar.find({ categoryId: grammarCategoryId }).select('_id');
+            const grammarIds = grammars.map(g => g._id);
+            filter.grammarId = { $in: grammarIds };
         }
 
-        const exercises = await GrammarExercise.find(filter);
+        // Add search functionality (question or explanation)
+        if (search) {
+            filter.$or = [
+                { question: { $regex: search, $options: 'i' } },
+                { explanation: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const limitVal = parseInt(limit) || 10;
+        const pageNum = parseInt(page) || 1;
+
+        if (random === 'true') {
+            const exercises = await GrammarExercise.aggregate([
+                { $match: filter },
+                { $sample: { size: limitVal } }
+            ]);
+
+            // Populate manually after aggregate
+            const populatedExercises = await GrammarExercise.populate(exercises, { path: 'grammarId', select: 'title level' });
+
+            return res.status(200).json({
+                success: true,
+                count: populatedExercises.length,
+                data: populatedExercises,
+                total: populatedExercises.length,
+                page: 1,
+                limit: limitVal,
+                totalPages: 1
+            });
+        }
+
+        // Count total for pagination
+        const total = await GrammarExercise.countDocuments(filter);
+        const totalPages = Math.ceil(total / limitVal);
+        const skip = (pageNum - 1) * limitVal;
+
+        const exercises = await GrammarExercise.find(filter)
+            .populate('grammarId', 'title level')
+            .sort({ createdAt: -1 }) // Sort by new
+            .skip(skip)
+            .limit(limitVal);
 
         res.status(200).json({
             success: true,
             count: exercises.length,
+            total: total,
+            page: pageNum,
+            limit: limitVal,
+            totalPages: totalPages,
             data: exercises
         });
     } catch (error) {
@@ -30,7 +81,7 @@ exports.getExercisesByGrammarId = async (req, res) => {
         const exercises = await GrammarExercise.find({
             grammarId: grammarId,
             isActive: true
-        });
+        }).populate('grammarId', 'title level');
 
         if (!exercises) {
             return res.status(404).json({ message: "Không tìm thấy bài tập nào." });
@@ -57,23 +108,6 @@ exports.createExercise = async (req, res) => {
     }
 };
 
-// Xóa bài tập (Dành cho Admin)
-exports.deleteExercise = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const exercise = await GrammarExercise.findById(id);
-
-        if (!exercise) {
-            return res.status(404).json({ message: "Không tìm thấy bài tập." });
-        }
-
-        await GrammarExercise.findByIdAndDelete(id);
-        res.status(200).json({ success: true, message: "Đã xóa bài tập thành công." });
-    } catch (error) {
-        res.status(500).json({ message: "Lỗi khi xóa bài tập", error: error.message });
-    }
-};
-
 // Cập nhật bài tập (Dành cho Admin)
 exports.updateExercise = async (req, res) => {
     try {
@@ -91,5 +125,22 @@ exports.updateExercise = async (req, res) => {
         res.status(200).json({ success: true, data: updatedExercise });
     } catch (error) {
         res.status(500).json({ message: "Lỗi khi cập nhật bài tập", error: error.message });
+    }
+};
+
+// Xóa bài tập (Dành cho Admin)
+exports.deleteExercise = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const exercise = await GrammarExercise.findById(id);
+
+        if (!exercise) {
+            return res.status(404).json({ message: "Không tìm thấy bài tập." });
+        }
+
+        await GrammarExercise.findByIdAndDelete(id);
+        res.status(200).json({ success: true, message: "Đã xóa bài tập thành công." });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi khi xóa bài tập", error: error.message });
     }
 };

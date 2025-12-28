@@ -5,8 +5,9 @@ const COOKIE_MAX_AGE = parseInt(process.env.COOKIE_MAX_AGE) || 30 * 24 * 60 * 60
 const cookieOptions = () => ({
     httpOnly: true,
     secure: process.env.COOKIE_SECURE === 'false' ? false : process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: COOKIE_MAX_AGE
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' cho cross-domain trong production
+    maxAge: COOKIE_MAX_AGE,
+    ...(process.env.COOKIE_DOMAIN && { domain: process.env.COOKIE_DOMAIN }) // Optional: set domain nếu cần
 });
 
 // Helper để lấy device info từ request
@@ -38,9 +39,12 @@ const register = async (req, res) => {
 // Login cho Flutter app - chỉ trả về tokens, KHÔNG set cookie
 const login = async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, logoutOthers } = req.body;
         const deviceInfo = getDeviceInfo(req);
-        const result = await authService.login(username, password, deviceInfo);
+
+        // Chỉ truyền nếu có giá trị, nếu không để service tự default là true
+        const logoutOthersFlag = logoutOthers !== undefined ? (logoutOthers === true || logoutOthers === 'true') : undefined;
+        const result = await authService.login(username, password, deviceInfo, logoutOthersFlag);
         // Không set cookie, chỉ trả về tokens trong response body cho Flutter app
         res.json({
             message: result.message,
@@ -56,10 +60,13 @@ const login = async (req, res) => {
 // Login cho Web Admin - set cookies cho cả access và refresh token
 const adminLogin = async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, logoutOthers } = req.body;
         const deviceInfo = getDeviceInfo(req);
         deviceInfo.deviceType = 'web'; // Force web type for admin
-        const result = await authService.adminLogin(username, password, deviceInfo);
+
+        // Chỉ truyền nếu có giá trị, nếu không để service tự default là true
+        const logoutOthersFlag = logoutOthers !== undefined ? (logoutOthers === true || logoutOthers === 'true') : undefined;
+        const result = await authService.adminLogin(username, password, deviceInfo, logoutOthersFlag);
 
         // Set cookies cho web admin (HttpOnly, Secure)
         if (result && result.accessToken) {
@@ -140,12 +147,12 @@ const logout = async (req, res) => {
         res.clearCookie('accessToken', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
         });
         res.clearCookie('refreshToken', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
         });
 
         res.json({ message: 'Đã đăng xuất thành công' });
@@ -163,17 +170,50 @@ const logoutAll = async (req, res) => {
         res.clearCookie('accessToken', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
         });
         res.clearCookie('refreshToken', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
         });
 
         res.json({ message: 'Đã đăng xuất tất cả thiết bị' });
     } catch (e) {
         res.status(500).json({ error: e.message });
+    }
+};
+
+// Forgot Password
+const forgotPassword = async (req, res) => {
+    try {
+        const { username } = req.body;
+        const result = await authService.forgotPassword(username);
+        res.json(result);
+    } catch (e) {
+        res.status(400).json({ message: e.message });
+    }
+};
+
+// Verify OTP
+const verifyOtp = async (req, res) => {
+    try {
+        const { username, otp } = req.body;
+        const result = await authService.verifyOtp(username, otp);
+        res.json(result);
+    } catch (e) {
+        res.status(400).json({ message: e.message });
+    }
+};
+
+// Reset Password
+const resetPassword = async (req, res) => {
+    try {
+        const { username, otp, newPassword } = req.body;
+        const result = await authService.resetPassword(username, otp, newPassword);
+        res.json(result);
+    } catch (e) {
+        res.status(400).json({ message: e.message });
     }
 };
 
@@ -184,5 +224,8 @@ module.exports = {
     refreshToken,
     getMe,
     logout,
-    logoutAll
+    logoutAll,
+    forgotPassword,
+    verifyOtp,
+    resetPassword
 };
