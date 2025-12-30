@@ -3,17 +3,21 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/database');
+const http = require('http'); // Cần thiết cho Socket.io
+const { Server } = require("socket.io");
+const socketManager = require('./socket/socketManager'); // Import file logic vừa tạo
+
 const app = express();
+
+// --- MIDDEWARE ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser()); // Để đọc cookies từ request
-
-
+app.use(cookieParser());
 
 const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ['http://localhost:5173', 'http://localhost:3000'];
+
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
         if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
             callback(null, true);
@@ -24,9 +28,11 @@ app.use(cors({
     credentials: true
 }));
 
+// --- DATABASE ---
 connectDB();
 
-// Import routes
+// --- ROUTES ---
+// (Giữ nguyên phần import routes của bạn)
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const vocabularyRoutes = require('./routes/vocabularyRoutes');
@@ -45,7 +51,8 @@ const landingPageRoutes = require('./routes/landingPageRoutes');
 const listeningRoutes = require('./routes/listeningRouter');
 const aiRoutes = require('./routes/aiRoutes');
 const ttsRoutes = require('./routes/ttsRoutes');
-
+const matchRoutes = require('./routes/matchRoutes');
+const questionRoutes = require('./routes/questionRoutes');
 
 // Sử dụng routes
 app.use('/api', authRoutes);
@@ -66,26 +73,41 @@ app.use('/api/landing-page', landingPageRoutes);
 app.use('/api/listenings', listeningRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/tts', ttsRoutes);
-
+app.use('/api/matches', matchRoutes); // Route này để xem lịch sử đấu
+app.use('/api/questions', questionRoutes);
 
 // 404 Handler
 app.use((req, res) => res.status(404).json({ message: 'API Endpoint không tồn tại' }));
 
-// Start Server
-// Start Server
-const net = require('net');
+// --- SETUP SERVER & SOCKET ---
 
-const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server đang chạy tại port ${PORT}`);
-    console.log('Environment:', process.env.NODE_ENV);
+// 1. Tạo HTTP Server bọc lấy Express App
+const server = http.createServer(app);
+
+// 2. Cấu hình Socket.io
+const io = new Server(server, {
+    cors: {
+        origin: allowedOrigins,
+        methods: ["GET", "POST"],
+        credentials: true
+    }
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
+// 3. Kích hoạt logic Socket (truyền biến io vào hàm)
+socketManager(io);
+
+// --- START SERVER ---
+const PORT = process.env.PORT || 3000;
+
+// Lưu ý: Phải dùng server.listen (của http) chứ KHÔNG dùng app.listen
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server đang chạy tại port ${PORT}`);
+    console.log(`📡 Socket.io đã sẵn sàng kết nối`);
+});
+
+// --- ERROR HANDLING ---
+process.on('unhandledRejection', (err) => {
     console.log(`Error: ${err.message}`);
-    // Close server & exit process
-    // server.close(() => process.exit(1)); // Commented out to prevent crash loop, just log for now
 });
 
 process.on('uncaughtException', (err) => {
