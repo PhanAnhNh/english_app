@@ -15,7 +15,8 @@ const ExerciseSchema = new mongoose.Schema({
     },
     mode: {
         type: String,
-        enum: ['pvp'],
+        enum: ['pvp', 'practice'],
+        default: 'practice'
     },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
