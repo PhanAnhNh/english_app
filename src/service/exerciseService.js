@@ -23,7 +23,6 @@ const getExercises = async (filters) => {
     let filter = {
         $or: [
             { isActive: true },
-            { isActive: { $exists: false } }
         ]
     };
 
