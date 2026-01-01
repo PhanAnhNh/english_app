@@ -30,8 +30,6 @@ app.use(cors({
 
 // --- DATABASE ---
 connectDB();
-const supabase = require('./config/supabaseConfig');
-supabase.checkConnection();
 
 // --- ROUTES ---
 // (Giữ nguyên phần import routes của bạn)

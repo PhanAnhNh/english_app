@@ -4,8 +4,6 @@ const mongoose = require('mongoose');
 const QuestionSchema = new mongoose.Schema({
     content: { type: String, required: true },
 
-    audioUrl: { type: String, default: null },
-
     options: {
         A: { type: String, required: true },
         B: { type: String, required: true },

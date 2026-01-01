@@ -3,8 +3,8 @@ const router = express.Router();
 const aiController = require('../controller/aiController');
 
 // Route Chatbot
-router.post('/ai/chat', aiController.chatWithHamster);
-router.get('/ai/config', aiController.getChatConfig);
-router.put('/ai/config', aiController.updateChatConfig);
+router.post('/chat', aiController.chatWithHamster);
+router.get('/config', aiController.getChatConfig);
+router.put('/config', aiController.updateChatConfig);
 
 module.exports = router;

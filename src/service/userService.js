@@ -48,7 +48,7 @@ const addUser = async (userData, adminId) => {
 };
 
 const getUsers = async (filters) => {
-    const { page = 1, limit, role, search, level } = filters;
+    const { page = 1, limit, role, search, level, sortBy = 'createdAt', sortOrder = 'desc' } = filters;
 
     // Tạo bộ lọc
     let filter = {};
@@ -62,10 +62,12 @@ const getUsers = async (filters) => {
         ];
     }
 
+    const sortOrderNum = sortOrder === 'asc' ? 1 : -1;
+
     const total = await User.countDocuments(filter);
     let query = User.find(filter)
         .select('-passwordHash')
-        .sort({ createdAt: -1 });
+        .sort({ [sortBy]: sortOrderNum });
 
     if (limit && !isNaN(parseInt(limit))) {
         const pageNum = parseInt(page) || 1;

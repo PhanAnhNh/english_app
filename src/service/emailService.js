@@ -2,7 +2,7 @@ const transporter = require('../config/emailConfig');
 
 // Đặt giá trị mặc định cho Tên Người Gửi và Email Người Gửi
 // Cần đảm bảo biến môi trường SENDER_NAME và EMAIL_USER được cấu hình
-const SENDER_NAME = process.env.SENDER_NAME || 'English App Team';
+const SENDER_NAME = process.env.SENDER_NAME || 'Beelingual Team';
 const SENDER_EMAIL = process.env.EMAIL_USER;
 
 const sendOtpEmail = async (to, otp) => {

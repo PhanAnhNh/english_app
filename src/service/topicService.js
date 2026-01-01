@@ -5,8 +5,12 @@ const UserVocabulary = require('../model/UserVocabulary');
 const mongoose = require('mongoose');
 
 const getTopics = async (filters) => {
-    const { page = 1, limit, sortBy = 'createdAt', sortOrder = 'asc', level } = filters;
-    let filter = level ? { level } : {};
+    const { page = 1, limit, sortBy = 'order', sortOrder = 'asc', level, search } = filters;
+    let filter = {};
+    if (level) filter.level = level;
+    if (search) {
+        filter.name = { $regex: search, $options: 'i' };
+    }
 
     const sortOrderNum = sortOrder === 'asc' ? 1 : -1;
 
