@@ -1,46 +1,85 @@
+// service/exerciseService.js
 const Exercise = require('../model/Exercise');
 const Topic = require('../model/Topic');
 const mongoose = require('mongoose');
 
 const getExercises = async (filters) => {
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, topicId, search, random } = filters;
+    const {
+        page = 1,
+        limit = 10,
+        sortBy = 'createdAt',
+        sortOrder = 'asc',
+        skill,
+        level,
+        type,
+        topic,
+        topicId,
+        search,
+        random,
+        mode
+    } = filters;
 
-    let filter = {};
+    // 1. Xử lý isActive: Lấy bài active HOẶC bài cũ chưa có trường isActive
+    let filter = {
+        $or: [
+            { isActive: true },
+        ]
+    };
+
+    // 2. Các bộ lọc cơ bản
     if (skill) filter.skill = skill;
     if (level) filter.level = level;
     if (type) filter.type = type;
-    // Xử lý lọc topicId (bao gồm cả trường hợp topicId=null)
+
+    // Nếu app gửi mode lên (vd: practice), thì lọc. Nếu không gửi thì lấy tất cả.
+    if (mode) filter.mode = mode;
+
+    // 3. Xử lý TopicId
     const tId = topicId || topic;
-    if (tId === 'null') {
+    if (tId === 'null' || tId === null) {
         filter.topicId = null;
-    } else if (tId) {
+    } else if (tId && mongoose.Types.ObjectId.isValid(tId)) {
+        // Chỉ lọc topicId nếu tId hợp lệ
         filter.topicId = tId;
     }
 
+    // 4. Tìm kiếm (Search)
     if (search) {
-        filter.$or = [
-            { questionText: { $regex: search, $options: 'i' } },
-            { explanation: { $regex: search, $options: 'i' } },
-            { 'options.text': { $regex: search, $options: 'i' } }
+        const searchRegex = { $regex: search, $options: 'i' };
+        filter.$and = [
+            {
+                $or: [
+                    { questionText: searchRegex },
+                    { explanation: searchRegex },
+                    { 'options.text': searchRegex }
+                ]
+            }
         ];
     }
 
-    // Nếu có tham số random=true, sử dụng $sample để lấy ngẫu nhiên cực nhanh
+    // --- LOGIC LẤY NGẪU NHIÊN (Cho Practice/Quiz) ---
     if (random === 'true' || random === true) {
         const limitNum = parseInt(limit) || 10;
 
-        // aggregate cần ObjectId thực sự, không tự ép kiểu từ string như find()
+        // Chuẩn bị filter cho Aggregate (cần ObjectId chuẩn)
         const matchFilter = { ...filter };
-        if (matchFilter.topicId && typeof matchFilter.topicId === 'string' && mongoose.Types.ObjectId.isValid(matchFilter.topicId)) {
+
+        // Xử lý lại $or trong aggregate nếu cần thiết, nhưng đơn giản nhất là xóa $or phức tạp nếu không cần
+        // Lưu ý: aggregate match với isActive cần cẩn thận.
+        // Ta dùng logic đơn giản cho matchFilter topicId:
+        if (matchFilter.topicId && typeof matchFilter.topicId === 'string') {
             matchFilter.topicId = new mongoose.Types.ObjectId(matchFilter.topicId);
         }
 
+        // Bỏ các toán tử $regex phức tạp ra khỏi aggregate nếu không cần thiết để tránh lỗi
+        // Hoặc giữ nguyên nếu MongoDB version hỗ trợ tốt.
+
         const data = await Exercise.aggregate([
             { $match: matchFilter },
-            { $sample: { size: limitNum } }
+            { $sample: { size: limitNum } } // Lấy ngẫu nhiên
         ]);
 
-        // Populate topicId cho trang Admin/App hiển thị tên chủ đề
+        // Populate lại topic info
         await Exercise.populate(data, { path: 'topicId', select: 'name' });
 
         return {
@@ -52,55 +91,55 @@ const getExercises = async (filters) => {
         };
     }
 
+    // --- LOGIC LẤY DANH SÁCH THƯỜNG (Admin/List) ---
     const total = await Exercise.countDocuments(filter);
-    let query = Exercise.find(filter).sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 }).populate('topicId', 'name');
 
-    if (limit && !isNaN(parseInt(limit))) {
-        const pageNum = parseInt(page) || 1;
-        const limitNum = parseInt(limit);
-        const skip = (pageNum - 1) * limitNum;
-        query = query.skip(skip).limit(limitNum);
+    let query = Exercise.find(filter)
+        .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
+        .populate('topicId', 'name');
+
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit);
+
+    if (!isNaN(limitNum)) {
+        query = query.skip((pageNum - 1) * limitNum).limit(limitNum);
     }
 
     const data = await query;
 
     return {
         total,
-        page: parseInt(page) || 1,
-        limit: limit ? parseInt(limit) : total,
-        totalPages: limit ? Math.ceil(total / parseInt(limit)) : 1,
+        page: pageNum,
+        limit: limitNum || total,
+        totalPages: limitNum ? Math.ceil(total / limitNum) : 1,
         data
     };
 };
 
 const getExerciseById = async (exerciseId) => {
     const item = await Exercise.findById(exerciseId);
-    if (!item) {
-        throw new Error('Không tìm thấy bài tập');
-    }
+    if (!item) throw new Error('Không tìm thấy bài tập');
     return item;
 };
 
-const createExercise = async (exerciseData) => {
-    const item = new Exercise(exerciseData);
+const createExercise = async (exerciseData, userId) => {
+    const item = new Exercise({
+        ...exerciseData,
+        createdBy: userId // Lưu người tạo nếu có
+    });
     await item.save();
     return item;
 };
 
 const updateExercise = async (exerciseId, exerciseData) => {
     const updated = await Exercise.findByIdAndUpdate(exerciseId, exerciseData, { new: true });
+    if (!updated) throw new Error('Không tìm thấy bài tập để sửa');
     return updated;
 };
 
 const deleteExercise = async (exerciseId) => {
     const exercise = await Exercise.findById(exerciseId);
-    if (!exercise) {
-        throw new Error('Không tìm thấy bài tập');
-    }
-
-    // Xóa audio trên Cloudinary
-
-
+    if (!exercise) throw new Error('Không tìm thấy bài tập');
     await Exercise.findByIdAndDelete(exerciseId);
     return { message: 'Đã xóa thành công' };
 };
@@ -112,4 +151,3 @@ module.exports = {
     updateExercise,
     deleteExercise
 };
-

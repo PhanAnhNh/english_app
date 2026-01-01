@@ -52,7 +52,6 @@ const listeningRoutes = require('./routes/listeningRouter');
 const aiRoutes = require('./routes/aiRoutes');
 const ttsRoutes = require('./routes/ttsRoutes');
 const matchRoutes = require('./routes/matchRoutes');
-const questionRoutes = require('./routes/questionRoutes');
 
 // Sử dụng routes
 app.use('/api', authRoutes);
@@ -74,7 +73,7 @@ app.use('/api/listenings', listeningRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/tts', ttsRoutes);
 app.use('/api/matches', matchRoutes); // Route này để xem lịch sử đấu
-app.use('/api/questions', questionRoutes);
+
 
 // 404 Handler
 app.use((req, res) => res.status(404).json({ message: 'API Endpoint không tồn tại' }));
