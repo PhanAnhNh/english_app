@@ -3,15 +3,31 @@ const Topic = require('../model/Topic');
 const mongoose = require('mongoose');
 
 const getExercises = async (filters) => {
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'asc', skill, level, type, topic, topicId, search, random } = filters;
+    const {
+        page = 1,
+        limit = 10,
+        sortBy = 'createdAt',
+        sortOrder = 'asc',
+        skill,
+        level,
+        type,
+        topic,
+        topicId,
+        search,
+        random,
+        mode
+    } = filters;
 
-    let filter = {};
+    // ✅ BẮT BUỘC: chỉ lấy câu hỏi đang active
+    let filter = { isActive: true };
+
     if (skill) filter.skill = skill;
     if (level) filter.level = level;
     if (type) filter.type = type;
-    // Xử lý lọc topicId (bao gồm cả trường hợp topicId=null)
+    if (mode) filter.mode = mode;
+
     const tId = topicId || topic;
-    if (tId === 'null') {
+    if (tId === 'null' || tId === null) {
         filter.topicId = null;
     } else if (tId) {
         filter.topicId = tId;
@@ -25,13 +41,16 @@ const getExercises = async (filters) => {
         ];
     }
 
-    // Nếu có tham số random=true, sử dụng $sample để lấy ngẫu nhiên cực nhanh
+    // 🎯 RANDOM (PVP cực chuẩn)
     if (random === 'true' || random === true) {
         const limitNum = parseInt(limit) || 10;
 
-        // aggregate cần ObjectId thực sự, không tự ép kiểu từ string như find()
         const matchFilter = { ...filter };
-        if (matchFilter.topicId && typeof matchFilter.topicId === 'string' && mongoose.Types.ObjectId.isValid(matchFilter.topicId)) {
+        if (
+            matchFilter.topicId &&
+            typeof matchFilter.topicId === 'string' &&
+            mongoose.Types.ObjectId.isValid(matchFilter.topicId)
+        ) {
             matchFilter.topicId = new mongoose.Types.ObjectId(matchFilter.topicId);
         }
 
@@ -40,7 +59,6 @@ const getExercises = async (filters) => {
             { $sample: { size: limitNum } }
         ]);
 
-        // Populate topicId cho trang Admin/App hiển thị tên chủ đề
         await Exercise.populate(data, { path: 'topicId', select: 'name' });
 
         return {
@@ -53,25 +71,31 @@ const getExercises = async (filters) => {
     }
 
     const total = await Exercise.countDocuments(filter);
-    let query = Exercise.find(filter).sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 }).populate('topicId', 'name');
 
-    if (limit && !isNaN(parseInt(limit))) {
-        const pageNum = parseInt(page) || 1;
-        const limitNum = parseInt(limit);
-        const skip = (pageNum - 1) * limitNum;
-        query = query.skip(skip).limit(limitNum);
+    const sortDirection = sortOrder === 'desc' || sortOrder === -1 ? -1 : 1;
+
+    let query = Exercise.find(filter)
+        .sort({ [sortBy]: sortDirection })
+        .populate('topicId', 'name');
+
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit);
+
+    if (!isNaN(limitNum)) {
+        query = query.skip((pageNum - 1) * limitNum).limit(limitNum);
     }
 
     const data = await query;
 
     return {
         total,
-        page: parseInt(page) || 1,
-        limit: limit ? parseInt(limit) : total,
-        totalPages: limit ? Math.ceil(total / parseInt(limit)) : 1,
+        page: pageNum,
+        limit: limitNum || total,
+        totalPages: limitNum ? Math.ceil(total / limitNum) : 1,
         data
     };
 };
+
 
 const getExerciseById = async (exerciseId) => {
     const item = await Exercise.findById(exerciseId);

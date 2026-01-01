@@ -9,6 +9,18 @@ const ExerciseSchema = new mongoose.Schema({
     correctAnswer: String,
     explanation: String,
     level: String,
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    mode: {
+        type: String,
+        enum: ['pvp'],
+    },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users'
+    },
     topicId: { type: mongoose.Schema.Types.ObjectId, ref: 'Topic' },
     createdAt: { type: Date, default: Date.now }
 });

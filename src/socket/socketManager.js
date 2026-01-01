@@ -1,5 +1,5 @@
 // socket/socketManager.js
-const Question = require('../model/Question');
+const Exercise = require('../model/Exercise');
 const Match = require('../model/Matches'); // Đã sửa thành Match (số ít) theo hướng dẫn trước
 const MatchResult = require('../model/MatchResult');
 const User = require('../model/User');
@@ -64,16 +64,17 @@ module.exports = (io) => {
 
                     // --- [QUERY DB THÔNG MINH] ---
                     // Chỉ lấy câu hỏi thuộc Level đã chọn và mode phù hợp
-                    const questions = await Question.aggregate([
+                    const questions = await Exercise.aggregate([
                         {
                             $match: {
                                 level: targetLevel,
-                                mode: { $in: ['pvp', 'both'] },
+                                mode: 'pvp',
                                 isActive: true
                             }
                         },
-                        { $sample: { size: targetCount } } // Lấy số lượng theo yêu cầu
+                        { $sample: { size: targetCount } }
                     ]);
+
 
                     // Nếu kho câu hỏi không đủ, lấy tạm tất cả những gì có
                     if (questions.length === 0) {
