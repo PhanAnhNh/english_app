@@ -3,13 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/database');
-<<<<<<< HEAD
-=======
 const http = require('http'); // Cần thiết cho Socket.io
 const { Server } = require("socket.io");
 const socketManager = require('./socket/socketManager'); // Import file logic vừa tạo
 
->>>>>>> 0975017973280ce022c619499aef8c26fcf1c86d
 const app = express();
 
 // --- MIDDEWARE ---
@@ -31,11 +28,7 @@ app.use(cors({
     credentials: true
 }));
 
-<<<<<<< HEAD
-// Kết nối database
-=======
 // --- DATABASE ---
->>>>>>> 0975017973280ce022c619499aef8c26fcf1c86d
 connectDB();
 const supabase = require('./config/supabaseConfig');
 supabase.checkConnection();
