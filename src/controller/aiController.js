@@ -1,6 +1,10 @@
 const { GoogleGenAI } = require("@google/genai");
 const ChatbotConfig = require('../model/ChatbotConfig');
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0975017973280ce022c619499aef8c26fcf1c86d
 // Controller xử lý Chatbot bằng Gemini
 exports.chatWithHamster = async (req, res) => {
     try {
