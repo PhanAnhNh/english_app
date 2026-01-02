@@ -42,11 +42,11 @@ const register = async (userData) => {
     const refreshToken = createRefreshToken({
         id: user._id,
         username: user.username
-    });
+    }, '30d'); // App: 30 ngày
 
     // Lưu refresh token vào database
     const refreshTokenExpires = new Date();
-    refreshTokenExpires.setDate(refreshTokenExpires.getDate() + 7); // 7 ngày
+    refreshTokenExpires.setDate(refreshTokenExpires.getDate() + 30); // App: 30 ngày
 
     await RefreshToken.create({
         userId: user._id,
@@ -100,11 +100,11 @@ const login = async (username, password, deviceInfo = {}, logoutOthers = true) =
     const refreshToken = createRefreshToken({
         id: user._id,
         username: user.username
-    });
+    }, '30d'); // App: 30 ngày
 
     // Lưu refresh token vào database
     const refreshTokenExpires = new Date();
-    refreshTokenExpires.setDate(refreshTokenExpires.getDate() + 7); // 7 ngày
+    refreshTokenExpires.setDate(refreshTokenExpires.getDate() + 30); // App: 30 ngày
 
     await RefreshToken.create({
         userId: user._id,
@@ -156,16 +156,16 @@ const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = tr
         fullname: user.fullname,
         role: user.role,
         tokenVersion: user.tokenVersion // Gắn version vào token
-    });
+    }, '15m'); // Production: 15 minutes
 
     const refreshToken = createRefreshToken({
         id: user._id,
         username: user.username
-    });
+    }, '1h'); // Production: 1 hour
 
     // Lưu refresh token vào database
     const refreshTokenExpires = new Date();
-    refreshTokenExpires.setDate(refreshTokenExpires.getDate() + 7); // 7 ngày
+    refreshTokenExpires.setHours(refreshTokenExpires.getHours() + 1); // Production: 1 hour
 
     await RefreshToken.create({
         userId: user._id,
@@ -205,18 +205,22 @@ const refreshAccessToken = async (refreshTokenString) => {
     // Kiểm tra refresh token trong database
     const refreshTokenDoc = await RefreshToken.findOne({
         token: refreshTokenString,
-        userId: decoded.id,
-        isRevoked: false
+        userId: decoded.id
     });
 
     if (!refreshTokenDoc) {
-        throw new Error('Refresh token không tồn tại hoặc đã bị thu hồi');
+        throw { message: 'Refresh token không tồn tại', code: 'TOKEN_NOT_FOUND' };
+    }
+
+    // Kiểm tra xem có bị thu hồi không (Concurrent Login)
+    if (refreshTokenDoc.isRevoked) {
+        throw { message: 'Phiên đăng nhập đã bị hủy từ thiết bị khác', code: 'SESSION_EXPIRED' };
     }
 
     // Kiểm tra token đã hết hạn chưa
     if (refreshTokenDoc.expiresAt < new Date()) {
         await RefreshToken.findByIdAndUpdate(refreshTokenDoc._id, { isRevoked: true });
-        throw new Error('Refresh token đã hết hạn');
+        throw { message: 'Refresh token đã hết hạn', code: 'REFRESH_TOKEN_EXPIRED' };
     }
 
     // Lấy thông tin user

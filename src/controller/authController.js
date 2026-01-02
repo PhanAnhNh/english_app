@@ -114,7 +114,11 @@ const refreshToken = async (req, res) => {
             user: result.user
         });
     } catch (e) {
-        res.status(401).json({ message: e.message });
+        // Trả về cả message và code (nếu có) để frontend xử lý alert
+        res.status(401).json({
+            message: e.message || 'Lỗi xác thực',
+            code: e.code || 'UNKNOWN_ERROR'
+        });
     }
 };
 
