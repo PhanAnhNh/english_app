@@ -7,5 +7,7 @@ const authMiddleware = require('../middleware/auth');
 router.post('/find', authMiddleware, matchController.findMatch);
 router.post('/submit', authMiddleware, matchController.submitResult);
 router.get('/:id/result', authMiddleware, matchController.getMatchResult);
+router.get('/latest', authMiddleware, matchController.getLatestMatch);
+
 
 module.exports = router;

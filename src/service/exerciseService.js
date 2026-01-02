@@ -63,10 +63,6 @@ const getExercises = async (filters) => {
 
         // Chuẩn bị filter cho Aggregate (cần ObjectId chuẩn)
         const matchFilter = { ...filter };
-
-        // Xử lý lại $or trong aggregate nếu cần thiết, nhưng đơn giản nhất là xóa $or phức tạp nếu không cần
-        // Lưu ý: aggregate match với isActive cần cẩn thận.
-        // Ta dùng logic đơn giản cho matchFilter topicId:
         if (matchFilter.topicId && typeof matchFilter.topicId === 'string') {
             matchFilter.topicId = new mongoose.Types.ObjectId(matchFilter.topicId);
         }

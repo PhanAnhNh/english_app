@@ -33,9 +33,29 @@ const getMatchResult = async (req, res) => {
         res.status(404).json({ error: e.message });
     }
 };
+const getLatestMatch = async (req, res) => {
+    try {
+        const match = await Match.findOne({
+            $or: [
+                { player1: req.user.id },
+                { player2: req.user.id }
+            ],
+            status: 'finished'
+        }).sort({ endTime: -1 });
+
+        if (!match) {
+            return res.json({ matchId: null });
+        }
+
+        res.json({ matchId: match._id });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
 
 module.exports = {
     findMatch,
     submitResult,
-    getMatchResult
+    getMatchResult,
+    getLatestMatch
 };
