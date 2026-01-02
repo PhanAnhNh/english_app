@@ -1,5 +1,6 @@
 // controller/matchController.js
 const matchService = require('../service/matchService');
+const Match = require('../model/Matches');
 
 const findMatch = async (req, res) => {
     try {
@@ -35,6 +36,7 @@ const getMatchResult = async (req, res) => {
 };
 const getLatestMatch = async (req, res) => {
     try {
+        // Bây giờ đã có biến Match, dòng này sẽ chạy đúng
         const match = await Match.findOne({
             $or: [
                 { player1: req.user.id },
@@ -53,9 +55,30 @@ const getLatestMatch = async (req, res) => {
     }
 };
 
+const getMatchHistory = async (req, res) => {
+    try {
+        // Tìm TẤT CẢ các trận đấu mà user là player1 hoặc player2 và đã kết thúc
+        const matches = await Match.find({
+            $or: [
+                { player1: req.user.id },
+                { player2: req.user.id }
+            ],
+            status: 'finished'
+        })
+            .populate('player1', 'username avatarUrl') // Lấy thông tin đối thủ
+            .populate('player2', 'username avatarUrl')
+            .sort({ endTime: -1 }); // Mới nhất lên đầu
+
+        res.json(matches);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
 module.exports = {
     findMatch,
     submitResult,
     getMatchResult,
-    getLatestMatch
+    getLatestMatch,
+    getMatchHistory
 };
