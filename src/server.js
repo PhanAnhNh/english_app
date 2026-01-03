@@ -6,7 +6,6 @@ const connectDB = require('./config/database');
 const http = require('http'); // Cần thiết cho Socket.io
 const { Server } = require("socket.io");
 const socketManager = require('./socket/socketManager'); // Import file logic vừa tạo
-const { initializeSessionSocketIO } = require('./socket/sessionSocketManager'); // Import session socket manager
 
 const app = express();
 
@@ -99,9 +98,6 @@ const io = new Server(server, {
 
 // 3. Kích hoạt logic Socket cho game (truyền biến io vào hàm)
 socketManager(io);
-
-// 4. Kích hoạt Session Socket.IO (use same io instance, separate /session namespace)
-initializeSessionSocketIO(io);
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 3000;
