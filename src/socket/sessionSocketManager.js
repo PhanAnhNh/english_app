@@ -1,24 +1,15 @@
-const { Server } = require('socket.io');
-
 // Store mapping of userId -> Set of socket IDs for user sessions
 const userSockets = new Map();
 
 let sessionIO = null;
 
 /**
- * Initialize Session Socket.IO server (separate namespace)
+ * Initialize Session Socket.IO namespace (separate namespace on existing io instance)
  * Can be used for both admin and student users
- * @param {http.Server} httpServer - HTTP server instance
+ * @param {Server} io - Socket.IO server instance (shared with game sockets)
  */
-const initializeSessionSocketIO = (httpServer) => {
-    const io = new Server(httpServer, {
-        cors: {
-            origin: process.env.CLIENT_URL || 'http://localhost:5173',
-            credentials: true
-        }
-    });
-
-    // Use /session namespace for concurrent login management
+const initializeSessionSocketIO = (io) => {
+    // Use /session namespace on the existing io instance
     sessionIO = io.of('/session');
 
     sessionIO.on('connection', (socket) => {

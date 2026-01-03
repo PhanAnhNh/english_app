@@ -17,18 +17,12 @@ app.use(cookieParser());
 
 const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : [
     'http://localhost:5173',
-    'http://localhost:3000',
-    'https://beelingual-admin.onrender.com'
+    'http://localhost:3000'
 ];
 
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
-
-        // Allow all .onrender.com domains in production
-        if (origin.endsWith('.onrender.com')) {
-            return callback(null, true);
-        }
 
         if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
             callback(null, true);
@@ -106,8 +100,8 @@ const io = new Server(server, {
 // 3. Kích hoạt logic Socket cho game (truyền biến io vào hàm)
 socketManager(io);
 
-// 4. Kích hoạt Session Socket.IO (separate /session namespace for concurrent login management)
-initializeSessionSocketIO(server);
+// 4. Kích hoạt Session Socket.IO (use same io instance, separate /session namespace)
+initializeSessionSocketIO(io);
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 3000;
