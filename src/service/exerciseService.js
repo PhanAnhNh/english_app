@@ -144,10 +144,179 @@ const deleteExercise = async (exerciseId) => {
     return { message: 'Đã xóa thành công' };
 };
 
+// --- UNIFIED PAGINATION (Regular + Grammar) ---
+const getUnifiedExercises = async (filters) => {
+    const {
+        page = 1,
+        limit = 10,
+        sortOrder = 'desc', // Default desc for admin
+        skill,
+        level,
+        type,
+        topicId,
+        search,
+        grammarCategoryId
+    } = filters;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = parseInt(limit);
+    const sortDir = sortOrder === 'asc' ? 1 : -1;
+
+    // --- PIPELINE 1: REGULAR EXERCISES ---
+    const regularMatch = { isActive: true };
+    if (skill && skill !== 'grammar') regularMatch.skill = skill;
+    if (level) regularMatch.level = level;
+    if (type) regularMatch.type = type;
+    if (topicId) regularMatch.topicId = new mongoose.Types.ObjectId(topicId);
+
+    // Search Regular
+    if (search) {
+        const searchRegex = { $regex: search, $options: 'i' };
+        regularMatch.$or = [
+            { questionText: searchRegex },
+            { explanation: searchRegex },
+            { 'options.text': searchRegex }
+        ];
+    }
+
+    // If skill is strictly 'grammar', Regular setup should yield 0 results
+    if (skill === 'grammar') {
+        // Force empty match for regular if filtering by grammar skill
+        regularMatch._id = null;
+    }
+
+
+    // --- PIPELINE 2: GRAMMAR EXERCISES (Union) ---
+    // Note: GrammarExercise schema needs Lookup to get Level from 'grammars' collection.
+
+    const grammarPipeline = [];
+
+    // 1. Initial Match (Active & Search)
+    const grammarMatchEarly = { isActive: true };
+    if (search) {
+        const searchRegex = { $regex: search, $options: 'i' };
+        grammarMatchEarly.$or = [
+            { question: searchRegex },
+            { explanation: searchRegex }
+        ];
+    }
+    grammarPipeline.push({ $match: grammarMatchEarly });
+
+    // 2. Lookup Grammar Info (for Level & Title)
+    grammarPipeline.push({
+        $lookup: {
+            from: 'grammars',
+            localField: 'grammarId',
+            foreignField: '_id',
+            as: 'grammarInfo'
+        }
+    });
+    grammarPipeline.push({ $unwind: { path: '$grammarInfo', preserveNullAndEmptyArrays: true } });
+
+    // 3. Normalize Fields to match Regular Structure
+    grammarPipeline.push({
+        $addFields: {
+            skill: 'grammar',
+            level: '$grammarInfo.level',
+            grammarTitle: '$grammarInfo.title',
+            grammarCategoryId: '$grammarInfo.categoryId',
+            // Computed Type
+            typeValue: {
+                $cond: { if: { $gt: [{ $size: "$options" }, 0] }, then: 'multiple_choice', else: 'fill_in_blank' }
+            },
+            type: {
+                $cond: { if: { $gt: [{ $size: "$options" }, 0] }, then: 'Trắc nghiệm', else: 'Điền từ' }
+            },
+            questionText: '$question', // Map question to questionText
+            _source: 'grammar'
+        }
+    });
+
+    // 4. Filter Grammar (Level, Type, Category)
+    const grammarMatchLate = {};
+    if (level) grammarMatchLate.level = level;
+    if (type) grammarMatchLate.typeValue = type; // Frontend sends 'multiple_choice', we mapped it to typeValue
+    if (grammarCategoryId) grammarMatchLate.grammarCategoryId = new mongoose.Types.ObjectId(grammarCategoryId);
+
+    // If skill filter is present and NOT grammar, block grammar results
+    if (skill && skill !== 'grammar') {
+        grammarMatchLate.skill = 'block_me'; // Impossible value
+    }
+
+    // Apply late match if any conditions exist
+    if (Object.keys(grammarMatchLate).length > 0) {
+        grammarPipeline.push({ $match: grammarMatchLate });
+    }
+
+    // --- MAIN AGGREGATION ---
+    const pipeline = [
+        // A. Start with Regular Exercises
+        { $match: regularMatch },
+        {
+            $addFields: {
+                _source: 'regular',
+                typeValue: '$type' // Normalize
+            }
+        },
+
+        // B. Union with Grammar Exercises
+        {
+            $unionWith: {
+                coll: 'grammarexercises',
+                pipeline: grammarPipeline
+            }
+        },
+
+        // C. Sort (createdAt)
+        { $sort: { createdAt: sortDir } },
+
+        // D. Facet (Count Total & Paged Data)
+        {
+            $facet: {
+                metadata: [{ $count: 'total' }],
+                data: [
+                    { $skip: skip },
+                    { $limit: limitNum },
+                    // Optional: Lookup topic info for regular exercises (since we matched ID but want Name)
+                    {
+                        $lookup: {
+                            from: 'topics',
+                            localField: 'topicId',
+                            foreignField: '_id',
+                            as: 'topicInfo'
+                        }
+                    },
+                    { $unwind: { path: '$topicInfo', preserveNullAndEmptyArrays: true } },
+                    { $addFields: { topicName: '$topicInfo.name' } } // Flatten
+                ]
+            }
+        }
+    ];
+
+    const result = await Exercise.aggregate(pipeline);
+
+    // Format Result
+    const metadata = result[0].metadata[0] || { total: 0 };
+    const data = result[0].data || [];
+
+    return {
+        total: metadata.total,
+        page: parseInt(page),
+        limit: limitNum,
+        totalPages: Math.ceil(metadata.total / limitNum),
+        data: data
+    };
+};
+
+const { createBulkDelete } = require('../utils/bulkDeleteHelper');
+const bulkDeleteExercises = createBulkDelete(Exercise);
+
 module.exports = {
     getExercises,
     getExerciseById,
     createExercise,
     updateExercise,
-    deleteExercise
+    deleteExercise,
+    bulkDeleteExercises,
+    getUnifiedExercises
 };

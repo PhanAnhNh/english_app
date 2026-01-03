@@ -56,10 +56,27 @@ const deleteTopic = async (req, res) => {
     }
 };
 
+const bulkDeleteTopics = async (req, res) => {
+    try {
+        const { ids } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'Danh sách IDs không hợp lệ' });
+        }
+
+        const result = await topicService.bulkDeleteTopics(ids);
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+
 module.exports = {
     getAllTopics,
     getTopicById,
     createTopic,
     updateTopic,
-    deleteTopic
+    deleteTopic,
+    bulkDeleteTopics
 };

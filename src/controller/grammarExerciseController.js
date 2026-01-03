@@ -144,3 +144,27 @@ exports.deleteExercise = async (req, res) => {
         res.status(500).json({ message: "Lỗi khi xóa bài tập", error: error.message });
     }
 };
+
+// Xử lý Bulk Delete (Sử dụng utils helper nếu muốn hoặc viết trực tiếp)
+const { createBulkDelete } = require('../utils/bulkDeleteHelper');
+// Vì helper trả về function, ta cần wrap hoặc dùng trực tiếp nếu signature khớp.
+// Helper signature: async (ids) => result.
+// Controller signature: async (req, res).
+
+// Define internal service function
+const bulkDeleteService = createBulkDelete(GrammarExercise);
+
+exports.bulkDeleteGrammarExercises = async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: 'Danh sách IDs không hợp lệ' });
+        }
+
+        const result = await bulkDeleteService(ids);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi khi xóa hàng loạt", error: error.message });
+    }
+};
+

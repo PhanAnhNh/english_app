@@ -18,5 +18,7 @@ router.put('/grammar-exercises/update/:id', authMiddleware, adminMiddleware, gra
 
 // Route xóa bài tập (Dành cho Admin)
 router.delete('/grammar-exercises/delete/:id', authMiddleware, adminMiddleware, grammarExerciseController.deleteExercise);
+router.post('/grammar-exercises/bulk-delete', authMiddleware, adminMiddleware, grammarExerciseController.bulkDeleteGrammarExercises);
+
 
 module.exports = router;

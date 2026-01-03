@@ -185,12 +185,21 @@ const getDistinctTypes = async () => {
     }
 };
 
+const { createBulkDelete } = require('../utils/bulkDeleteHelper');
+
+const bulkDeleteVocabularies = createBulkDelete(Vocabulary, {
+    cascadeDeletes: [
+        { model: UserVocabulary, field: 'vocabulary' }
+    ]
+});
+
 module.exports = {
     getVocabularies,
     getVocabularyById,
     createVocabulary,
     updateVocabulary,
     deleteVocabulary,
-    getDistinctTypes
+    getDistinctTypes,
+    bulkDeleteVocabularies
 };
 

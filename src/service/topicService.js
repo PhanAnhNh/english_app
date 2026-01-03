@@ -123,6 +123,53 @@ const deleteTopic = async (topicId) => {
     return { message: 'Đã xóa chủ đề và toàn bộ dữ liệu liên quan thành công' };
 };
 
+// Bulk delete topics
+const bulkDeleteTopics = async (topicIds) => {
+    if (!Array.isArray(topicIds) || topicIds.length === 0) {
+        throw new Error('Danh sách ID không hợp lệ');
+    }
+
+    const results = {
+        success: [],
+        failed: []
+    };
+
+    for (const topicId of topicIds) {
+        try {
+            const topic = await Topic.findById(topicId);
+            if (!topic) {
+                results.failed.push({ id: topicId, reason: 'Không tìm thấy' });
+                continue;
+            }
+
+            // Delete related data
+            await Vocabulary.deleteMany({ topic: topicId });
+            await Exercise.deleteMany({ topicId: topicId });
+            await Topic.findByIdAndDelete(topicId);
+
+            results.success.push(topicId);
+        } catch (err) {
+            results.failed.push({ id: topicId, reason: err.message });
+        }
+    }
+
+    // Reorder remaining topics
+    const remainingTopics = await Topic.find({}).sort({ order: 1 });
+    for (let i = 0; i < remainingTopics.length; i++) {
+        if (remainingTopics[i].order !== i + 1) {
+            await Topic.findByIdAndUpdate(remainingTopics[i]._id, { order: i + 1 });
+        }
+    }
+
+    return {
+        message: `Đã xóa ${results.success.length}/${topicIds.length} chủ đề`,
+        successCount: results.success.length,
+        failCount: results.failed.length,
+        details: results
+    };
+};
+
+
 const getTopicsWithProgress = async (userId, filters = {}) => {
     const { page, limit, sortBy = 'order', sortOrder = 'asc' } = filters;
 
@@ -216,6 +263,7 @@ module.exports = {
     createTopic,
     updateTopic,
     getTopicsWithProgress,
-    deleteTopic
+    deleteTopic,
+    bulkDeleteTopics
 };
 

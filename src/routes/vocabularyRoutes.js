@@ -10,6 +10,8 @@ router.get('/detail_vocab/:id', authMiddleware, vocabularyController.getVocabula
 router.post('/vocab', authMiddleware, adminMiddleware, vocabularyController.createVocabulary);
 router.put('/vocab/:id', authMiddleware, adminMiddleware, vocabularyController.updateVocabulary);
 router.delete('/vocab/:id', authMiddleware, adminMiddleware, vocabularyController.deleteVocabulary);
+router.post('/vocab/bulk-delete', authMiddleware, adminMiddleware, vocabularyController.bulkDeleteVocabularies);
+
 
 module.exports = router;
 

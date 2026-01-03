@@ -114,6 +114,7 @@ const refreshToken = async (req, res) => {
             user: result.user
         });
     } catch (e) {
+        console.error('❌ Refresh Token Failed:', e); // Debug Log
         // Trả về cả message và code (nếu có) để frontend xử lý alert
         res.status(401).json({
             message: e.message || 'Lỗi xác thực',

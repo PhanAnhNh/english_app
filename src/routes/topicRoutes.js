@@ -9,6 +9,8 @@ router.get('/detail_topics/:id', authMiddleware, topicController.getTopicById);
 router.post('/topics', authMiddleware, adminMiddleware, topicController.createTopic);
 router.put('/edit_topic/:id', authMiddleware, adminMiddleware, topicController.updateTopic);
 router.delete('/delet_topic/:id', authMiddleware, adminMiddleware, topicController.deleteTopic);
+router.post('/topics/bulk-delete', authMiddleware, adminMiddleware, topicController.bulkDeleteTopics);
+
 
 module.exports = router;
 

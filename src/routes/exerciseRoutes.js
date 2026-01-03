@@ -5,10 +5,13 @@ const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
 
 router.get('/exercises', authMiddleware, exerciseController.getExercises);
+router.get('/exercises/mixed', authMiddleware, exerciseController.getUnifiedExercises);
 router.get('/detail_exercises/:id', authMiddleware, exerciseController.getExerciseById);
 router.post('/exercises', authMiddleware, adminMiddleware, exerciseController.createExercise);
 router.put('/edit_exercise/:id', authMiddleware, adminMiddleware, exerciseController.updateExercise);
 router.delete('/delet_exercise/:id', authMiddleware, adminMiddleware, exerciseController.deleteExercise);
+router.post('/exercises/bulk-delete', authMiddleware, adminMiddleware, exerciseController.bulkDeleteExercises);
+
 
 module.exports = router;
 

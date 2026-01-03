@@ -10,6 +10,8 @@ router.get('/detail_grammar/:id', authMiddleware, grammarController.getGrammarBy
 router.post('/add_grammar', authMiddleware, adminMiddleware, grammarController.createGrammar);
 router.put('/edit_grammar/:id', authMiddleware, adminMiddleware, grammarController.updateGrammar);
 router.delete('/delet_grammar/:id', authMiddleware, adminMiddleware, grammarController.deleteGrammar);
+router.post('/grammar/bulk-delete', authMiddleware, adminMiddleware, grammarController.bulkDeleteGrammars);
+
 router.get('/grammar/by-category/:categoryId', authMiddleware, grammarController.getGrammarsByCategory);
 
 // Grammar category routes

@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const User = require('../model/User');
 const RefreshToken = require('../model/RefreshToken');
 const { createAccessToken, createRefreshToken } = require('../utils/jwt');
+const { parseDuration } = require('../utils/time');
+const { JWT_WEB_EXPIRES_IN, JWT_WEB_REFRESH_EXPIRES_IN } = require('../config/constants');
 const emailService = require('./emailService');
 
 const register = async (userData) => {
@@ -155,17 +157,19 @@ const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = tr
         username: user.username,
         fullname: user.fullname,
         role: user.role,
+        role: user.role,
+        role: user.role,
         tokenVersion: user.tokenVersion // Gắn version vào token
-    }, '15m'); // Production: 15 minutes
+    }, JWT_WEB_EXPIRES_IN); // Web Admin Config
 
     const refreshToken = createRefreshToken({
         id: user._id,
         username: user.username
-    }, '1h'); // Production: 1 hour
+    }, JWT_WEB_REFRESH_EXPIRES_IN); // Web Admin Config
 
     // Lưu refresh token vào database
     const refreshTokenExpires = new Date();
-    refreshTokenExpires.setHours(refreshTokenExpires.getHours() + 1); // Production: 1 hour
+    refreshTokenExpires.setTime(refreshTokenExpires.getTime() + parseDuration(JWT_WEB_REFRESH_EXPIRES_IN));
 
     await RefreshToken.create({
         userId: user._id,
@@ -185,7 +189,7 @@ const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = tr
             username: user.username,
             fullname: user.fullname,
             email: user.email,
-            avatar: user.avatar,
+            avatarUrl: user.avatarUrl,
             role: user.role,
             tokenVersion: user.tokenVersion
         },
@@ -211,6 +215,7 @@ const refreshAccessToken = async (refreshTokenString) => {
     });
 
     if (!refreshTokenDoc) {
+        console.log('⚠️ Refresh Token Not Found in DB:', refreshTokenString.substring(0, 10) + '...');
         throw { message: 'Refresh token không tồn tại', code: 'TOKEN_NOT_FOUND' };
     }
 
@@ -221,6 +226,11 @@ const refreshAccessToken = async (refreshTokenString) => {
 
     // Kiểm tra token đã hết hạn chưa
     if (refreshTokenDoc.expiresAt < new Date()) {
+        console.log('⚠️ Refresh Token Expired:', {
+            expiresAt: refreshTokenDoc.expiresAt,
+            now: new Date(),
+            diffSeconds: (new Date() - refreshTokenDoc.expiresAt) / 1000
+        });
         await RefreshToken.findByIdAndUpdate(refreshTokenDoc._id, { isRevoked: true });
         throw { message: 'Refresh token đã hết hạn', code: 'REFRESH_TOKEN_EXPIRED' };
     }
@@ -232,13 +242,17 @@ const refreshAccessToken = async (refreshTokenString) => {
     }
 
     // Tạo access token mới
+    // Nếu là Web Admin (deviceType = 'web') thì dùng biến môi trường riêng
+    const isWeb = refreshTokenDoc.deviceInfo && refreshTokenDoc.deviceInfo.deviceType === 'web';
+    const accessTokenLife = isWeb ? JWT_WEB_EXPIRES_IN : null;
+
     const newAccessToken = createAccessToken({
         id: user._id,
         username: user.username,
         fullname: user.fullname,
         role: user.role,
         tokenVersion: user.tokenVersion // Cập nhật version mới nhất
-    });
+    }, accessTokenLife);
 
     return {
         accessToken: newAccessToken,
@@ -247,7 +261,7 @@ const refreshAccessToken = async (refreshTokenString) => {
             username: user.username,
             fullname: user.fullname,
             email: user.email,
-            avatar: user.avatar,
+            avatarUrl: user.avatarUrl,
             role: user.role,
             tokenVersion: user.tokenVersion
         }
