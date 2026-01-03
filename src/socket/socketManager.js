@@ -400,7 +400,8 @@ module.exports = (io) => {
 
             // Tính điểm
             const currentQ = room.questions[room.currentQuestionIndex];
-            const isCorrect = answer === currentQ.correctAnswer;
+
+            const isCorrect = answer.toString().trim() === currentQ.correctAnswer.toString().trim();
             let points = 0;
 
             if (isCorrect) {
