@@ -61,26 +61,46 @@ const getMatchHistory = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const matches = await Match.find({
+        // --- XỬ LÝ THAM SỐ MẶC ĐỊNH ---
+        // Nếu không truyền, page sẽ là 1, limit sẽ là 10
+        let page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 10;
+
+        // An toàn: Đảm bảo page không âm và limit không quá lớn
+        if (page < 1) page = 1;
+        if (limit > 50) limit = 50; // Giới hạn max 50 item để tránh nặng server
+
+        const skip = (page - 1) * limit;
+
+        // --- TẠO ĐIỀU KIỆN LỌC ---
+        const filter = {
             $or: [
                 { player1: userId },
                 { player2: userId }
             ],
             status: 'finished'
-        })
+        };
+
+        // --- ĐẾM TỔNG (Cho phân trang) ---
+        const totalDocs = await Match.countDocuments(filter);
+        const totalPages = Math.ceil(totalDocs / limit);
+
+        // --- TRUY VẤN DATA ---
+        const matches = await Match.find(filter)
             .populate('player1', 'username avatarUrl')
             .populate('player2', 'username avatarUrl')
-            .sort({ endTime: -1 })
+            .sort({ endTime: -1 }) // Mới nhất lên đầu
+            .skip(skip)
+            .limit(limit)
             .lean();
 
-        // Lấy toàn bộ kết quả cho các match
+        // --- LẤY KẾT QUẢ CHI TIẾT ---
         const matchIds = matches.map(m => m._id);
-
         const results = await MatchResult.find({
             matchId: { $in: matchIds }
         }).populate('userId', 'username');
 
-        // Gộp kết quả vào từng match
+        // --- GỘP DATA ---
         const history = matches.map(match => {
             const matchResults = results.filter(
                 r => r.matchId.toString() === match._id.toString()
@@ -97,12 +117,22 @@ const getMatchHistory = async (req, res) => {
             };
         });
 
-        res.json(history);
+        // --- TRẢ VỀ KẾT QUẢ ---
+        // Cấu trúc mới: { data: [...], pagination: {...} }
+        res.json({
+            data: history,
+            pagination: {
+                page,
+                limit,
+                totalDocs,
+                totalPages
+            }
+        });
+
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 };
-
 
 module.exports = {
     findMatch,
