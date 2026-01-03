@@ -427,6 +427,48 @@ module.exports = (io) => {
             checkAndNextQuestion(roomId);
         });
 
+        socket.on('leave_room', async ({ roomId }) => {
+            const room = activeRooms[roomId];
+            if (!room) return;
+
+            console.log(`🏳️ Player ${socket.id} surrendered in room ${roomId}`);
+
+            // Xác định người thua
+            const leavingPlayer = room.players[socket.id];
+            if (!leavingPlayer) return;
+
+            // Dừng timer
+            if (room.timer) clearTimeout(room.timer);
+
+            // Thông báo cho đối thủ
+            socket.to(roomId).emit('opponent_disconnected', {
+                message: 'Đối thủ đã đầu hàng. Bạn thắng!'
+            });
+
+            // Lưu kết quả DB
+            for (const p of Object.values(room.players)) {
+                await matchService.saveMatchResultDirectly(
+                    p.userId,
+                    room.matchId,
+                    p.score,
+                    p.correctCount
+                );
+            }
+
+            await Match.findByIdAndUpdate(room.matchId, {
+                status: 'finished',
+                endTime: new Date()
+            });
+
+            // Emit kết thúc game cho bên còn lại
+            socket.to(roomId).emit('game_finished', {
+                reason: 'opponent_surrender'
+            });
+
+            delete activeRooms[roomId];
+        });
+
+
         // --- DISCONNECT ---
         socket.on('disconnect', async () => {
             const waitingUser = waitingQueue.find(u => u.socketId === socket.id);
