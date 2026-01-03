@@ -15,11 +15,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ['http://localhost:5173', 'http://localhost:3000'];
+const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://beelingual-admin.onrender.com'
+];
 
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
+
+        // Allow all .onrender.com domains in production
+        if (origin.endsWith('.onrender.com')) {
+            return callback(null, true);
+        }
+
         if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
             callback(null, true);
         } else {
