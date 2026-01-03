@@ -184,7 +184,12 @@ module.exports = (io) => {
             totalQuestions: room.questions.length,
             content: questionForClient,
             timeLimit: QUESTION_TIME_LIMIT,
-            startTime: Date.now()
+            startTime: Date.now(),
+
+            players: Object.values(room.players).map(p => ({
+                userId: p.userId,
+                score: p.score
+            }))
         });
 
         room.questionStartTime = Date.now();
