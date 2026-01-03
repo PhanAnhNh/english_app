@@ -3,189 +3,109 @@ const Exercise = require('../model/Exercise');
 const Match = require('../model/Matches');
 const matchService = require('../service/matchService');
 
+// ==========================================
+// CONFIG & STATE
+// ==========================================
+
 // Biến lưu trữ trạng thái game trên RAM
 let waitingQueue = [];
 let activeRooms = {};
 
 const QUESTION_TIME_LIMIT = 10; // 10 giây mỗi câu
 const FIND_MATCH_TIMEOUT = 5000; // 5 giây không thấy ai thì gặp Bot
+const ROUND_RESULT_DURATION = 3000; // 3 giây hiển thị kết quả mỗi vòng
 
 // Cấu hình Bot mặc định
 const BOT_PROFILE = {
     userId: 'BOT_ID',
-    socketId: 'BOT_SOCKET', // Fake Socket ID để quản lý trong room
+    socketId: 'BOT_SOCKET', // Fake Socket ID
     username: 'Mr. Robot 🤖',
-    avatarUrl: 'https://cdn-icons-png.flaticon.com/512/4712/4712109.png', // Ảnh Bot
+    avatarUrl: 'https://cdn-icons-png.flaticon.com/512/4712/4712109.png',
     level: 'ANY',
     score: 0,
     correctCount: 0,
-    hasAnsweredCurrent: false
+    hasAnsweredCurrent: false,
+    roundPoints: 0 // [MỚI] Lưu điểm nhận được trong câu hiện tại
 };
 
 module.exports = (io) => {
 
     // ==========================================
-    // 1. HÀM HỖ TRỢ BOT & LOGIC GAME
+    // 1. CORE GAME LOGIC
     // ==========================================
 
-    // Hàm tạo trận đấu với Bot
-    const createBotMatch = async (socket, user) => {
-        console.log(`🤖 Đang tạo trận với Bot cho user: ${user.username}`);
-
-        // Setup Player 1 (User thật)
-        const player1 = { ...user, score: 0, correctCount: 0, hasAnsweredCurrent: false };
-        // Setup Player 2 (Bot) - Clone để không bị tham chiếu
-        const player2 = { ...BOT_PROFILE, level: user.level };
-
-        const roomId = `match_${player1.userId}_BOT`;
-        socket.join(roomId);
-
-        // Lấy câu hỏi
-        let questions = await Exercise.aggregate([
-            { $match: { level: user.level, mode: 'pvp', isActive: true } },
-            { $sample: { size: user.questionCount } }
-        ]);
-
-        // Fallback nếu thiếu câu hỏi
-        if (questions.length === 0) {
-            questions = await Exercise.aggregate([
-                { $match: { mode: 'pvp', isActive: true } },
-                { $sample: { size: user.questionCount } }
-            ]);
-        }
-
-        // Lưu Match vào DB (đánh dấu player2 là 'BOT')
-        const newMatch = await Match.create({
-            player1: player1.userId,
-            player2: null, // Hoặc để null, hoặc lưu string 'BOT' tùy schema của bạn
-            questions: questions.map(q => ({ questionId: q._id, correctAnswer: q.correctAnswer })),
-            status: 'playing',
-            startTime: new Date()
-        });
-
-        // Khởi tạo Room RAM
-        activeRooms[roomId] = {
-            matchId: newMatch._id,
-            targetLevel: user.level,
-            currentQuestionIndex: 0,
-            questionStartTime: 0,
-            timer: null,
-            players: {
-                [player1.socketId]: player1,
-                [player2.socketId]: player2 // Thêm Bot vào list
-            },
-            questions: questions
-        };
-
-        // Báo cho Client
-        io.to(roomId).emit('match_found', {
-            roomId,
-            matchId: newMatch._id,
-            player1,
-            player2
-        });
-
-        // Bắt đầu câu 1
-        setTimeout(() => nextQuestion(roomId), 3000);
-    };
-
-    // Hàm giả lập Bot trả lời
-    const triggerBotAnswer = (roomId) => {
+    /**
+     * [MỚI] Gửi kết quả vòng đấu (Round) cho tất cả người chơi trong phòng.
+     * Hàm này được gọi khi tất cả đã trả lời xong hoặc hết giờ.
+     */
+    const sendRoundResult = (roomId) => {
         const room = activeRooms[roomId];
         if (!room) return;
 
-        // Chỉ chạy nếu trong phòng có Bot
-        const botId = 'BOT_SOCKET';
-        if (!room.players[botId]) return;
+        // Xóa timer đếm ngược câu hỏi cũ
+        if (room.timer) clearTimeout(room.timer);
 
-        // 1. Random thời gian trả lời (từ 2s đến 8s)
-        const delay = Math.floor(Math.random() * 6000) + 2000;
+        const currentQ = room.questions[room.currentQuestionIndex];
 
-        // 2. Random tỷ lệ đúng (70%)
-        const isCorrectGuess = Math.random() < 0.7;
+        // Chuẩn bị dữ liệu bảng điểm của vòng này
+        const playersResult = Object.values(room.players).map(p => ({
+            userId: p.userId,
+            socketId: p.socketId,
+            username: p.username,
+            avatarUrl: p.avatarUrl,
+            totalScore: p.score,       // Tổng điểm hiện tại
+            addedScore: p.roundPoints, // Điểm cộng thêm ở câu này (để client hiển thị hiệu ứng +10)
+            isCorrect: p.roundPoints > 0 // Logic đơn giản: có điểm là đúng
+        }));
 
+        // Gửi sự kiện cho client hiển thị Popup kết quả
+        io.to(roomId).emit('round_result', {
+            correctAnswer: currentQ.correctAnswer,
+            players: playersResult,
+            nextQuestionIn: ROUND_RESULT_DURATION / 1000 // Báo client đếm ngược (ví dụ 3s)
+        });
+
+        // Đợi 3s rồi chuyển câu mới
         setTimeout(() => {
-            if (!activeRooms[roomId]) return; // Room có thể đã đóng
-
-            const botPlayer = activeRooms[roomId].players[botId];
-            if (botPlayer.hasAnsweredCurrent) return;
-
-            botPlayer.hasAnsweredCurrent = true;
-            const currentQ = activeRooms[roomId].questions[activeRooms[roomId].currentQuestionIndex];
-
-            // Tính điểm giả lập
-            let points = 0;
-            const isReallyCorrect = isCorrectGuess; // Giả sử bot chọn đáp án đúng/sai dựa trên tỷ lệ
-
-            if (isReallyCorrect) {
-                botPlayer.correctCount++;
-                const timeRemaining = Math.max(0, QUESTION_TIME_LIMIT - (delay / 1000));
-                points = 10 + Math.floor(timeRemaining);
+            // Kiểm tra lại phòng còn tồn tại không (phòng khi user thoát hết)
+            if (activeRooms[roomId]) {
+                activeRooms[roomId].currentQuestionIndex++;
+                nextQuestion(roomId);
             }
-
-            botPlayer.score += points;
-
-            // Gửi thông báo cho User thật biết đối thủ (Bot) đã trả lời
-            io.to(roomId).emit('opponent_progress', {
-                opponentId: botPlayer.userId,
-                scoreAdded: points, // Ẩn điểm nếu muốn
-                currentScore: botPlayer.score
-            });
-
-            // Kiểm tra next câu
-            checkAndNextQuestion(roomId);
-
-        }, delay);
+        }, ROUND_RESULT_DURATION);
     };
 
-    // Hàm kiểm tra chung xem tất cả player đã trả lời chưa
-    const checkAndNextQuestion = (roomId) => {
-        const room = activeRooms[roomId];
-        if (!room) return;
-
-        const allPlayers = Object.values(room.players);
-        const allAnswered = allPlayers.every(p => p.hasAnsweredCurrent);
-
-        if (allAnswered) {
-            if (room.timer) clearTimeout(room.timer);
-            // Delay 1s rồi chuyển câu
-            setTimeout(() => {
-                if (activeRooms[roomId]) {
-                    activeRooms[roomId].currentQuestionIndex++;
-                    nextQuestion(roomId);
-                }
-            }, 1000);
-        }
-    };
-
-    // Hàm chuyển câu hỏi (Dùng chung cho cả PvP người và Bot)
+    /**
+     * Chuyển sang câu hỏi tiếp theo
+     */
     const nextQuestion = async (roomId) => {
         const room = activeRooms[roomId];
         if (!room) return;
 
-        // Check hết game
+        // 1. Kiểm tra kết thúc game
         if (room.currentQuestionIndex >= room.questions.length) {
             await finishGame(roomId);
             return;
         }
 
-        // Reset trạng thái trả lời
+        // 2. Reset trạng thái cho câu hỏi mới
         Object.keys(room.players).forEach(socketId => {
             room.players[socketId].hasAnsweredCurrent = false;
+            room.players[socketId].roundPoints = 0; // Reset điểm vòng
         });
 
         const currentQ = room.questions[room.currentQuestionIndex];
 
-        // Ẩn đáp án đúng khi gửi về client
+        // 3. Chuẩn bị dữ liệu (ẩn đáp án đúng)
         const questionForClient = { ...currentQ, correctAnswer: undefined };
 
+        // 4. Gửi câu hỏi mới
         io.to(roomId).emit('next_question', {
             questionIndex: room.currentQuestionIndex + 1,
             totalQuestions: room.questions.length,
             content: questionForClient,
             timeLimit: QUESTION_TIME_LIMIT,
             startTime: Date.now(),
-
             players: Object.values(room.players).map(p => ({
                 userId: p.userId,
                 score: p.score
@@ -194,29 +114,97 @@ module.exports = (io) => {
 
         room.questionStartTime = Date.now();
 
-        // **QUAN TRỌNG: Kích hoạt Bot trả lời (nếu có Bot trong phòng)**
+        // 5. Kích hoạt Bot (nếu có)
         triggerBotAnswer(roomId);
 
-        // Timer server (timeout câu hỏi)
+        // 6. Set timer hết giờ (Server side timeout)
         if (room.timer) clearTimeout(room.timer);
         room.timer = setTimeout(() => {
             handleTimeout(roomId);
-        }, (QUESTION_TIME_LIMIT + 1) * 1000);
+        }, (QUESTION_TIME_LIMIT + 1) * 1000); // Thêm 1s buffer mạng
     };
 
+    /**
+     * Xử lý khi hết thời gian câu hỏi
+     */
     const handleTimeout = (roomId) => {
         const room = activeRooms[roomId];
         if (!room) return;
 
-        console.log(`⏰ Room ${roomId}: Hết giờ câu ${room.currentQuestionIndex + 1}`);
-        io.to(roomId).emit('time_up', {
-            correctAnswer: room.questions[room.currentQuestionIndex].correctAnswer
+        console.log(`⏰ Room ${roomId}: Time out câu ${room.currentQuestionIndex + 1}`);
+
+        // Force các player chưa trả lời thành đã trả lời (với 0 điểm)
+        Object.values(room.players).forEach(p => {
+            if (!p.hasAnsweredCurrent) {
+                p.hasAnsweredCurrent = true;
+                p.roundPoints = 0;
+            }
         });
 
-        room.currentQuestionIndex++;
-        setTimeout(() => nextQuestion(roomId), 2000);
+        // Gọi màn hình kết quả thay vì nextQuestion ngay
+        sendRoundResult(roomId);
     };
 
+    /**
+     * Kiểm tra xem mọi người đã trả lời xong chưa
+     */
+    const checkAndNextQuestion = (roomId) => {
+        const room = activeRooms[roomId];
+        if (!room) return;
+
+        const allPlayers = Object.values(room.players);
+        const allAnswered = allPlayers.every(p => p.hasAnsweredCurrent);
+
+        if (allAnswered) {
+            // Delay nhỏ 0.5s để UI client kịp hiển thị animation chọn đáp án của chính mình
+            // sau đó mới hiện bảng tổng kết
+            if (room.timer) clearTimeout(room.timer);
+            setTimeout(() => {
+                sendRoundResult(roomId);
+            }, 500);
+        }
+    };
+
+    /**
+     * Logic Bot trả lời tự động
+     */
+    const triggerBotAnswer = (roomId) => {
+        const room = activeRooms[roomId];
+        if (!room) return;
+        const botId = 'BOT_SOCKET';
+        if (!room.players[botId]) return; // Không có bot thì thoát
+
+        // Random delay và độ chính xác
+        const delay = Math.floor(Math.random() * 6000) + 2000; // 2s - 8s
+        const isCorrectGuess = Math.random() < 0.7; // 70% đúng
+
+        setTimeout(() => {
+            if (!activeRooms[roomId]) return;
+            const botPlayer = activeRooms[roomId].players[botId];
+
+            // Nếu bot chưa trả lời (có thể user trả lời xong hết trước khi bot kịp trả lời)
+            if (!botPlayer.hasAnsweredCurrent) {
+                botPlayer.hasAnsweredCurrent = true;
+
+                let points = 0;
+                if (isCorrectGuess) {
+                    botPlayer.correctCount++;
+                    const timeRemaining = Math.max(0, QUESTION_TIME_LIMIT - (delay / 1000));
+                    points = 10 + Math.floor(timeRemaining);
+                }
+
+                botPlayer.score += points;
+                botPlayer.roundPoints = points; // [QUAN TRỌNG] Lưu điểm để hiển thị
+
+                // Kiểm tra xem xong hết chưa
+                checkAndNextQuestion(roomId);
+            }
+        }, delay);
+    };
+
+    /**
+     * Kết thúc game
+     */
     const finishGame = async (roomId) => {
         const room = activeRooms[roomId];
         if (!room) return;
@@ -224,7 +212,7 @@ module.exports = (io) => {
 
         const playerIds = Object.keys(room.players);
 
-        // Lưu kết quả (Service đã chặn lưu Bot)
+        // Lưu kết quả vào DB
         await Promise.all(playerIds.map(async (socketId) => {
             const player = room.players[socketId];
             await matchService.saveMatchResultDirectly(
@@ -235,7 +223,6 @@ module.exports = (io) => {
             );
         }));
 
-        // Update Match DB
         await Match.findByIdAndUpdate(room.matchId, {
             status: 'finished',
             endTime: new Date()
@@ -249,8 +236,67 @@ module.exports = (io) => {
         console.log(`🏁 Room ${roomId} finished.`);
     };
 
+    /**
+     * Tạo phòng đấu với Bot
+     */
+    const createBotMatch = async (socket, user) => {
+        console.log(`🤖 Tạo Bot Match cho: ${user.username}`);
+
+        // Init stats
+        const player1 = { ...user, score: 0, correctCount: 0, hasAnsweredCurrent: false, roundPoints: 0 };
+        const player2 = { ...BOT_PROFILE, level: user.level, roundPoints: 0 };
+
+        const roomId = `match_${player1.userId}_BOT`;
+        socket.join(roomId);
+
+        // Lấy câu hỏi
+        let questions = await Exercise.aggregate([
+            { $match: { level: user.level, mode: 'pvp', isActive: true } },
+            { $sample: { size: user.questionCount } }
+        ]);
+
+        if (questions.length === 0) {
+            questions = await Exercise.aggregate([
+                { $match: { mode: 'pvp', isActive: true } },
+                { $sample: { size: user.questionCount } }
+            ]);
+        }
+
+        const newMatch = await Match.create({
+            player1: player1.userId,
+            player2: null,
+            questions: questions.map(q => ({ questionId: q._id, correctAnswer: q.correctAnswer })),
+            status: 'playing',
+            startTime: new Date()
+        });
+
+        activeRooms[roomId] = {
+            matchId: newMatch._id,
+            targetLevel: user.level,
+            currentQuestionIndex: 0,
+            questionStartTime: 0,
+            timer: null,
+            players: {
+                [player1.socketId]: player1,
+                [player2.socketId]: player2
+            },
+            questions: questions
+        };
+
+        io.to(roomId).emit('match_found', {
+            roomId,
+            matchId: newMatch._id,
+            player1,
+            player2
+        });
+
+        // Bắt đầu sau 3s
+        setTimeout(() => nextQuestion(roomId), 3000);
+    };
+
+
     // ==========================================
-    // 2. SOCKET EVENTS
+    // 2. SOCKET EVENT HANDLERS
     // ==========================================
 
     io.on('connection', (socket) => {
@@ -262,7 +308,7 @@ module.exports = (io) => {
             const targetLevel = level || 'A1';
             const targetCount = questionCount || 5;
 
-            // Check duplicate
+            // Prevent duplicate join
             if (waitingQueue.find(user => user.userId === userId)) return;
 
             const currentUser = {
@@ -270,28 +316,23 @@ module.exports = (io) => {
                 userId, username, avatarUrl,
                 level: targetLevel,
                 questionCount: targetCount,
-                // Timer chờ ghép Bot
                 botTimeout: null
             };
 
-
-
-            // 1. Tìm đối thủ NGƯỜI THẬT
+            // Tìm đối thủ
             const opponentIndex = waitingQueue.findIndex(user =>
                 user.level === targetLevel && user.userId !== userId
             );
 
             if (opponentIndex !== -1) {
-                // --> TÌM THẤY NGƯỜI
+                // --> FOUND REAL PLAYER
                 const opponent = waitingQueue.splice(opponentIndex, 1)[0];
-
-                // Hủy timer bot của đối thủ vì đã tìm thấy người
                 if (opponent.botTimeout) clearTimeout(opponent.botTimeout);
 
-                const player1 = currentUser;
-                const player2 = opponent;
-                const roomId = `match_${player1.userId}_${player2.userId}`;
+                const player1 = { ...currentUser, score: 0, correctCount: 0, hasAnsweredCurrent: false, roundPoints: 0 };
+                const player2 = { ...opponent, score: 0, correctCount: 0, hasAnsweredCurrent: false, roundPoints: 0 };
 
+                const roomId = `match_${player1.userId}_${player2.userId}`;
                 const socket1 = io.sockets.sockets.get(player1.socketId);
                 const socket2 = io.sockets.sockets.get(player2.socketId);
 
@@ -299,13 +340,11 @@ module.exports = (io) => {
                     socket1.join(roomId);
                     socket2.join(roomId);
 
-                    // Lấy câu hỏi
                     let questions = await Exercise.aggregate([
                         { $match: { level: targetLevel, mode: 'pvp', isActive: true } },
                         { $sample: { size: targetCount } }
                     ]);
 
-                    // Tạo Match DB
                     const newMatch = await Match.create({
                         player1: player1.userId,
                         player2: player2.userId,
@@ -314,7 +353,6 @@ module.exports = (io) => {
                         startTime: new Date()
                     });
 
-                    // Init Room
                     activeRooms[roomId] = {
                         matchId: newMatch._id,
                         targetLevel,
@@ -322,8 +360,8 @@ module.exports = (io) => {
                         questionStartTime: 0,
                         timer: null,
                         players: {
-                            [player1.socketId]: { ...player1, score: 0, correctCount: 0, hasAnsweredCurrent: false },
-                            [player2.socketId]: { ...player2, score: 0, correctCount: 0, hasAnsweredCurrent: false }
+                            [player1.socketId]: player1,
+                            [player2.socketId]: player2
                         },
                         questions: questions
                     };
@@ -336,14 +374,11 @@ module.exports = (io) => {
                     console.log(`✅ PvP Room ${roomId} started.`);
                 }
             } else {
-                // --> KHÔNG THẤY AI: Thêm vào hàng chờ và set Timeout gọi Bot
-
+                // --> WAITING FOR OPPONENT
                 currentUser.botTimeout = setTimeout(() => {
-                    // 1. Xóa khỏi hàng chờ
                     waitingQueue = waitingQueue.filter(u => u.socketId !== socket.id);
-                    // 2. Tạo trận với Bot
                     createBotMatch(socket, currentUser);
-                }, FIND_MATCH_TIMEOUT); // 5000ms
+                }, FIND_MATCH_TIMEOUT);
 
                 waitingQueue.push(currentUser);
             }
@@ -353,9 +388,12 @@ module.exports = (io) => {
         socket.on('submit_answer', (data) => {
             const { roomId, answer } = data;
             const room = activeRooms[roomId];
-            if (!room || !room.players[socket.id]) return;
 
+            // Validate basic
+            if (!room || !room.players[socket.id]) return;
             const player = room.players[socket.id];
+
+            // Nếu đã trả lời rồi thì bỏ qua
             if (player.hasAnsweredCurrent) return;
 
             player.hasAnsweredCurrent = true;
@@ -372,47 +410,38 @@ module.exports = (io) => {
                 const timeRemaining = Math.max(0, QUESTION_TIME_LIMIT - timeElapsed);
                 points = 10 + Math.floor(timeRemaining);
             }
-            player.score += points;
 
-            // Emit kết quả cá nhân
+            player.score += points;
+            player.roundPoints = points; // Lưu lại để tí nữa gửi round_result
+
+            // 1. Phản hồi NGAY LẬP TỨC cho người bấm (để UI hiện Xanh/Đỏ)
             socket.emit('answer_result', {
                 isCorrect,
-                correctAnswer: currentQ.correctAnswer,
+                correctAnswer: currentQ.correctAnswer, // Có thể gửi luôn hoặc đợi round_result tùy logic client
                 scoreAdded: points,
                 currentScore: player.score
             });
 
-            // Emit tiến trình cho đối thủ (kể cả Bot cũng nhận, nhưng Bot ko xử lý, chỉ Client nhận)
-            socket.to(roomId).emit('opponent_progress', {
-                opponentId: player.userId,
-                scoreAdded: points,
-                currentScore: player.score
-            });
-
-            // Check xem chuyển câu được chưa
+            // 2. Kiểm tra xem đã đủ điều kiện hiển thị bảng tổng kết chưa
             checkAndNextQuestion(roomId);
         });
 
         // --- DISCONNECT ---
         socket.on('disconnect', async () => {
-            // 1. Xử lý hàng chờ: Nếu đang chờ mà thoát thì xóa timeout Bot
             const waitingUser = waitingQueue.find(u => u.socketId === socket.id);
             if (waitingUser) {
                 if (waitingUser.botTimeout) clearTimeout(waitingUser.botTimeout);
                 waitingQueue = waitingQueue.filter(u => u.socketId !== socket.id);
             }
 
-            // 2. Xử lý đang chơi (giữ logic cũ)
             for (const [roomId, room] of Object.entries(activeRooms)) {
                 if (room.players[socket.id]) {
                     if (room.timer) clearTimeout(room.timer);
 
-                    // Báo đối thủ thắng
                     socket.to(roomId).emit('opponent_disconnected', {
                         message: 'Đối thủ đã thoát. Bạn thắng!'
                     });
 
-                    // Nếu đấu với Bot, Bot không cần báo user thoát, nhưng cứ end game
                     try {
                         await Match.findByIdAndUpdate(room.matchId, { status: 'finished', endTime: new Date() });
                     } catch (e) { }
