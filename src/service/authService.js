@@ -147,11 +147,6 @@ const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = tr
         // Tăng token version để đá máy cũ (Instant Logout)
         user.tokenVersion = (user.tokenVersion || 0) + 1;
         await user.save();
-
-        // Emit force-logout event via WebSocket to all connected sessions
-        // TODO: Implement sessionSocketManager
-        // const { forceLogoutUser } = require('../socket/sessionSocketManager');
-        // forceLogoutUser(user._id.toString());
     }
 
     // Tạo tokens
@@ -189,6 +184,8 @@ const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = tr
             id: user._id,
             username: user.username,
             fullname: user.fullname,
+            email: user.email,
+            avatar: user.avatar,
             role: user.role,
             tokenVersion: user.tokenVersion
         },
@@ -249,6 +246,8 @@ const refreshAccessToken = async (refreshTokenString) => {
             id: user._id,
             username: user.username,
             fullname: user.fullname,
+            email: user.email,
+            avatar: user.avatar,
             role: user.role,
             tokenVersion: user.tokenVersion
         }
