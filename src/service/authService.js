@@ -149,8 +149,9 @@ const adminLogin = async (username, password, deviceInfo = {}, logoutOthers = tr
         await user.save();
 
         // Emit force-logout event via WebSocket to all connected sessions
-        const { forceLogoutUser } = require('../socket/sessionSocketManager');
-        forceLogoutUser(user._id.toString());
+        // TODO: Implement sessionSocketManager
+        // const { forceLogoutUser } = require('../socket/sessionSocketManager');
+        // forceLogoutUser(user._id.toString());
     }
 
     // Tạo tokens
