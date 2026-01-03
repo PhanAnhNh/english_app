@@ -55,25 +55,54 @@ const getLatestMatch = async (req, res) => {
     }
 };
 
+const MatchResult = require('../model/MatchResult');
+
 const getMatchHistory = async (req, res) => {
     try {
-        // Tìm TẤT CẢ các trận đấu mà user là player1 hoặc player2 và đã kết thúc
+        const userId = req.user.id;
+
         const matches = await Match.find({
             $or: [
-                { player1: req.user.id },
-                { player2: req.user.id }
+                { player1: userId },
+                { player2: userId }
             ],
             status: 'finished'
         })
-            .populate('player1', 'username avatarUrl') // Lấy thông tin đối thủ
+            .populate('player1', 'username avatarUrl')
             .populate('player2', 'username avatarUrl')
-            .sort({ endTime: -1 }); // Mới nhất lên đầu
+            .sort({ endTime: -1 })
+            .lean();
 
-        res.json(matches);
+        // Lấy toàn bộ kết quả cho các match
+        const matchIds = matches.map(m => m._id);
+
+        const results = await MatchResult.find({
+            matchId: { $in: matchIds }
+        }).populate('userId', 'username');
+
+        // Gộp kết quả vào từng match
+        const history = matches.map(match => {
+            const matchResults = results.filter(
+                r => r.matchId.toString() === match._id.toString()
+            );
+
+            return {
+                ...match,
+                results: matchResults.map(r => ({
+                    userId: r.userId._id,
+                    username: r.userId.username,
+                    score: r.score,
+                    correctCount: r.correctCount
+                }))
+            };
+        });
+
+        res.json(history);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 };
+
 
 module.exports = {
     findMatch,
