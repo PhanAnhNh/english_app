@@ -6,6 +6,7 @@ const connectDB = require('./config/database');
 const http = require('http'); // Cần thiết cho Socket.io
 const { Server } = require("socket.io");
 const socketManager = require('./socket/socketManager'); // Import file logic vừa tạo
+const { initializeSessionSocketIO } = require('./socket/sessionSocketManager'); // Import session socket manager
 
 const app = express();
 
@@ -83,7 +84,7 @@ app.use((req, res) => res.status(404).json({ message: 'API Endpoint không tồn
 // 1. Tạo HTTP Server bọc lấy Express App
 const server = http.createServer(app);
 
-// 2. Cấu hình Socket.io
+// 2. Cấu hình Socket.io cho game (default namespace)
 const io = new Server(server, {
     cors: {
         origin: allowedOrigins,
@@ -92,8 +93,11 @@ const io = new Server(server, {
     }
 });
 
-// 3. Kích hoạt logic Socket (truyền biến io vào hàm)
+// 3. Kích hoạt logic Socket cho game (truyền biến io vào hàm)
 socketManager(io);
+
+// 4. Kích hoạt Session Socket.IO (separate /session namespace for concurrent login management)
+initializeSessionSocketIO(server);
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 3000;
