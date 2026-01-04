@@ -279,9 +279,6 @@ const getGrammarsByCategory = async (categoryId, filters) => {
     };
 };
 
-const { createBulkDelete } = require('../utils/bulkDeleteHelper');
-const bulkDeleteGrammars = createBulkDelete(Grammar);
-
 module.exports = {
     getGrammars,
     getGrammarById,
@@ -295,8 +292,6 @@ module.exports = {
     createGrammarCategory,
     updateGrammarCategory,
     deleteGrammarCategory,
-    getGrammarsByCategory,
-    bulkDeleteGrammars
+    getGrammarsByCategory
 };
-
 

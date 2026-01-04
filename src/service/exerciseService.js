@@ -155,7 +155,9 @@ const getUnifiedExercises = async (filters) => {
         type,
         topicId,
         search,
-        grammarCategoryId
+        grammarCategoryId,
+        mode,
+        grammarId
     } = filters;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -164,10 +166,12 @@ const getUnifiedExercises = async (filters) => {
 
     // --- PIPELINE 1: REGULAR EXERCISES ---
     const regularMatch = { isActive: true };
-    if (skill && skill !== 'grammar') regularMatch.skill = skill;
+    if (skill) regularMatch.skill = skill;
     if (level) regularMatch.level = level;
     if (type) regularMatch.type = type;
+    if (mode) regularMatch.mode = mode;
     if (topicId) regularMatch.topicId = new mongoose.Types.ObjectId(topicId);
+    if (grammarId) regularMatch.grammarId = new mongoose.Types.ObjectId(grammarId);
 
     // Search Regular
     if (search) {
@@ -179,12 +183,8 @@ const getUnifiedExercises = async (filters) => {
         ];
     }
 
-    // If skill is strictly 'grammar', Regular setup should yield 0 results
-    if (skill === 'grammar') {
-        // Force empty match for regular if filtering by grammar skill
-        regularMatch._id = null;
-    }
-
+    // REMOVED BLOCKING OF GRAMMAR SKILL FOR REGULAR EXERCISES
+    // Because we now have generic exercises with skill='grammar' (e.g. PVP)
 
     // --- PIPELINE 2: GRAMMAR EXERCISES (Union) ---
     // Note: GrammarExercise schema needs Lookup to get Level from 'grammars' collection.
@@ -200,6 +200,11 @@ const getUnifiedExercises = async (filters) => {
             { explanation: searchRegex }
         ];
     }
+    // Filter by grammarId early if possible (optimized)
+    if (grammarId) {
+        grammarMatchEarly.grammarId = new mongoose.Types.ObjectId(grammarId);
+    }
+
     grammarPipeline.push({ $match: grammarMatchEarly });
 
     // 2. Lookup Grammar Info (for Level & Title)
@@ -220,6 +225,8 @@ const getUnifiedExercises = async (filters) => {
             level: '$grammarInfo.level',
             grammarTitle: '$grammarInfo.title',
             grammarCategoryId: '$grammarInfo.categoryId',
+            // Mimic populate: Replace grammarId (ObjectId) with the populated object
+            grammarId: '$grammarInfo',
             // Computed Type
             typeValue: {
                 $cond: { if: { $gt: [{ $size: "$options" }, 0] }, then: 'multiple_choice', else: 'fill_in_blank' }
@@ -228,7 +235,8 @@ const getUnifiedExercises = async (filters) => {
                 $cond: { if: { $gt: [{ $size: "$options" }, 0] }, then: 'Trắc nghiệm', else: 'Điền từ' }
             },
             questionText: '$question', // Map question to questionText
-            _source: 'grammar'
+            _source: 'grammar',
+            mode: 'practice' // Grammar exercises are always practice mode
         }
     });
 
@@ -237,6 +245,12 @@ const getUnifiedExercises = async (filters) => {
     if (level) grammarMatchLate.level = level;
     if (type) grammarMatchLate.typeValue = type; // Frontend sends 'multiple_choice', we mapped it to typeValue
     if (grammarCategoryId) grammarMatchLate.grammarCategoryId = new mongoose.Types.ObjectId(grammarCategoryId);
+
+    // If filtering by mode, only include grammar exercises if mode is 'practice'
+    if (mode && mode !== 'practice') {
+        // Grammar exercises are practice only. If user wants PVP, block them.
+        grammarMatchLate.mode = mode; // This will fail match because mode is 'practice'
+    }
 
     // If skill filter is present and NOT grammar, block grammar results
     if (skill && skill !== 'grammar') {

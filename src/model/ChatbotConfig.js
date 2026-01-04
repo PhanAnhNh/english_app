@@ -13,6 +13,10 @@ const ChatbotConfigSchema = new mongoose.Schema({
         type: String,
         default: 'Chào con sen! Cụ Hamster Bee-Bot đây. Hôm nay định lười học tiếng Anh hay gì mà tìm cụ? hihi'
     },
+    invitationMessage: {
+        type: String,
+        default: 'Bạn có việc BeeBot giúp gì không?'
+    },
     suggestedQuestions: [{
         text: String,
         label: String,

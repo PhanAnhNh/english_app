@@ -32,7 +32,7 @@ exports.chatWithHamster = async (req, res) => {
                 .join('\n');
 
             if (facts) {
-                knowledgeBase = `\n\n[DỮ LIỆU KIẾN THỨC CỦA BẠN]:\n${facts}\n\n(Lưu ý: Nếu người dùng hỏi bất cứ điều gì LIÊN QUAN đến các thông tin trên, hãy ưu tiên sử dụng dữ liệu này để trả lời một cách tự nhiên nhất).`;
+                knowledgeBase = `\n\n[THÔNG TIN THAM KHẢO]:\n${facts}\n\n(Lưu ý: CHỈ sử dụng thông tin trên nếu người dùng hỏi trực tiếp về chúng. Nếu hỏi chuyện phím, hãy ưu tiên trò chuyện tự nhiên theo tính cách, ĐỪNG cố lái sang các thông tin này).`;
             }
         }
 
@@ -42,7 +42,19 @@ exports.chatWithHamster = async (req, res) => {
 
         // Kiểm tra xem đây có phải là câu hỏi gợi ý không
         const suggestedQuestion = config.suggestedQuestions?.find(q => q.text.toLowerCase() === message.toLowerCase());
-        const isSuggested = !!suggestedQuestion;
+
+        // OPTIMIZATION: Nếu là câu hỏi gợi ý có sẵn câu trả lời, trả về luôn để giữ đúng định dạng (xuống dòng, icon...)
+        // Không qua AI để tránh việc AI tự ý format lại (ví dụ tự thêm markdown link gây duplicate)
+        if (suggestedQuestion && suggestedQuestion.response) {
+            console.log('Returning hardcoded response for suggested question:', suggestedQuestion.text);
+            return res.json({
+                success: true,
+                reply: suggestedQuestion.response
+            });
+        }
+
+        const isSuggested = false; // Đã xử lý ở trên, biến này giờ không cần logic cũ nữa
+
 
         // Danh sách các model Gemma 3 để fallback
         const gemmaModels = isSuggested
@@ -176,6 +188,7 @@ exports.getChatConfig = async (req, res) => {
                 botName: 'Bee-Bot',
                 personality: 'Bạn là Bee-Bot.',
                 welcomeMessage: 'Chào con sen! Cụ Bee-Bot đây. Hôm nay định lười học tiếng Anh hay gì mà tìm cụ?',
+                invitationMessage: 'Bạn có việc BeeBot giúp gì không?',
                 suggestedQuestions: [
                     {
                         text: 'App này có gì hay ?',

@@ -34,7 +34,7 @@ exports.getExercises = async (req, res) => {
             ]);
 
             // Populate manually after aggregate
-            const populatedExercises = await GrammarExercise.populate(exercises, { path: 'grammarId', select: 'title level' });
+            const populatedExercises = await GrammarExercise.populate(exercises, { path: 'grammarId', select: 'title level categoryId' });
 
             return res.status(200).json({
                 success: true,
@@ -53,7 +53,7 @@ exports.getExercises = async (req, res) => {
         const skip = (pageNum - 1) * limitVal;
 
         const exercises = await GrammarExercise.find(filter)
-            .populate('grammarId', 'title level')
+            .populate('grammarId', 'title level categoryId')
             .sort({ createdAt: -1 }) // Sort by new
             .skip(skip)
             .limit(limitVal);
@@ -81,7 +81,7 @@ exports.getExercisesByGrammarId = async (req, res) => {
         const exercises = await GrammarExercise.find({
             grammarId: grammarId,
             isActive: true
-        }).populate('grammarId', 'title level');
+        }).populate('grammarId', 'title level categoryId');
 
         if (!exercises) {
             return res.status(404).json({ message: "Không tìm thấy bài tập nào." });
