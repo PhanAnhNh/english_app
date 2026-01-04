@@ -61,7 +61,7 @@ const getVocabularies = async (filters) => {
         // Build Query
         let query = Vocabulary.find(filter)
             .populate('topic', 'name')
-            .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 });
+            .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1, _id: 1 }); // Thêm _id để đảm bảo thứ tự ổn định
 
         // Apply Pagination ONLY if limit is provided and valid
         if (limit && !isNaN(parseInt(limit))) {
