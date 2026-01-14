@@ -178,9 +178,21 @@ const deleteUser = async (userId, adminId) => {
         throw new Error('Không tìm thấy người dùng');
     }
 
+    // 0. Lấy thông tin người thực hiện (admin)
+    const adminUser = await User.findById(adminId);
+    if (!adminUser) throw new Error('Người thực hiện không hợp lệ');
+
     // Không cho phép xóa chính mình
     if (user._id.toString() === adminId) {
         throw new Error('Không thể xóa tài khoản của chính mình');
+    }
+
+    // Logic Phân Quyền Chặt Chẽ (Strict Mode)
+    // Nếu là Admin thường -> Chỉ được xóa Student
+    if (adminUser.role !== 'super_admin') {
+        if (user.role === 'admin' || user.role === 'super_admin') {
+            throw new Error('Bạn không đủ quyền hạn để xóa quản trị viên này.');
+        }
     }
 
     await User.findByIdAndDelete(userId);
