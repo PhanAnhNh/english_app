@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const UserSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true, index: true },
     passwordHash: { type: String, required: true },
-    role: { type: String, default: 'student', enum: ['student', 'admin'] },
+    role: { type: String, default: 'student', enum: ['student', 'admin', 'super_admin'] },
     email: { type: String, index: true },
     level: { type: String, default: 'A1' },
     fullname: { type: String, required: true },

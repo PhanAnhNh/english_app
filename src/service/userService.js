@@ -22,7 +22,7 @@ const addUser = async (userData, adminId) => {
     }
 
     // Role chỉ cho phép các giá trị hợp lệ, mặc định 'student'
-    const allowedRoles = ['student', 'admin'];
+    const allowedRoles = ['student', 'admin', 'super_admin'];
     const userRole = allowedRoles.includes(role) ? role : 'student';
 
     // Hash password
